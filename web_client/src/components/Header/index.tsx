@@ -332,7 +332,7 @@ const Header = () => {
                     </svg>
 
                     {product.length > 0 && (
-                      <span className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
+                      <span suppressHydrationWarning className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
                         {product.length}
                       </span>
                     )}
@@ -349,7 +349,7 @@ const Header = () => {
                       />
                     </svg>
                     {wishlist.length > 0 && (
-                      <span className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
+                      <span suppressHydrationWarning className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
                         {wishlist.length}
                       </span>
                     )}

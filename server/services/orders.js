@@ -3,6 +3,7 @@ import { CONFIG_KEYS, ERR_CODES, FEATURE_TYPES, getNextOrderStatuses, ORDER_STAT
 import { calculateInvoice, generateOrderNo, getFullAddress, getShippingAmount } from "../utils/helpers.js";
 import { fileService, productService } from "./index.js";
 import { createPayment, razorpayInstance } from "./payment.js";
+import { publishInventoryEvent } from "./inventoryAgentProducer.js";
 
 const createOrder = async ({ name, mobile, address, city, pincode, country, state, isDiffBillAdd, billingName, billingMobile, billingAddress, billingCity, billingPincode, billingCountry, billingState, gstNo, notes, orderProducts = [], userId, shippingAmount=0 }) => {
   const totalAmount = orderProducts.reduce((a,c) => a + (c.price * c.quantity), 0) + shippingAmount;
@@ -64,7 +65,17 @@ const createOrder = async ({ name, mobile, address, city, pincode, country, stat
           tax: dbProduct?.Hsn?.tax || 0,
           stockId: stock.id
         }
-      })
+      });
+
+      // Dispatch inventory stock change event to Kafka multi-agent system using product slug
+      const remainingStock = Math.max(0, (dbProduct.stock || 0) - parseInt(prod.quantity));
+      publishInventoryEvent({
+        slug: dbProduct.slug,
+        productName: dbProduct.title || prod.title,
+        sku: dbProduct.slug,
+        currentStock: remainingStock,
+        reorderThreshold: 10,
+      }).catch(err => console.warn('[InventoryAgent] Event emit error:', err.message));
     }));
     if(errors.length > 0) {
       const err = new Error(errors.join(','));
