@@ -297,3 +297,11 @@ export const productReviewSchema = Joi.object({
 export const reviewVisibilitySchema = Joi.object({
   isHidden: Joi.boolean().required(),
 });
+
+export const restockProductSchema = Joi.object({
+  slug: Joi.string().trim().optional(),
+  productId: Joi.alternatives().try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/)).optional(),
+  quantity: Joi.number().integer().positive().max(19).required(),
+  poNumber: Joi.string().allow("", null).optional(),
+}).or("slug", "productId");
+

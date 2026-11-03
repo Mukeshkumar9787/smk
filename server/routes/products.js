@@ -1,8 +1,9 @@
 import express from "express";
 import productController from "../controllers/products.js"; 
 import validateInput from "../middlewares/requestValidationMiddleware.js"
-import { productBodySchema, productReviewSchema, productUpdateSchema, reviewVisibilitySchema } from "../utils/validation.js";
+import { productBodySchema, productReviewSchema, productUpdateSchema, reviewVisibilitySchema, restockProductSchema } from "../utils/validation.js";
 import { getAuthMiddleware } from "../middlewares/authMiddleware.js";
+import { agentAuthMiddleware } from "../middlewares/agentAuthMiddleware.js";
 import { ROLE_TYPES } from "../utils/constants.js";
 
 const router = express.Router();
@@ -10,8 +11,9 @@ const router = express.Router();
 // Get all categories
 router.get("/active", productController.getActiveProducts);
 
-// Restock product stock (e.g. upon PO approval or supplier intake)
-router.post("/restock", productController.restockProduct);
+// Restock product stock (protected: requires agent API key or admin authorization)
+router.post("/restock", agentAuthMiddleware, validateInput(restockProductSchema), productController.restockProduct);
+
 
 // Get single product by ID
 router.get("/admin/:slug", getAuthMiddleware([ROLE_TYPES.ADMIN]), productController.getProductBySlugAdmin);
