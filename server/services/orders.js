@@ -66,16 +66,6 @@ const createOrder = async ({ name, mobile, address, city, pincode, country, stat
           stockId: stock.id
         }
       });
-
-      // Dispatch inventory stock change event to Kafka multi-agent system using product slug
-      const remainingStock = Math.max(0, (dbProduct.stock || 0) - parseInt(prod.quantity));
-      publishInventoryEvent({
-        slug: dbProduct.slug,
-        productName: dbProduct.title || prod.title,
-        sku: dbProduct.slug,
-        currentStock: remainingStock,
-        reorderThreshold: 10,
-      }).catch(err => console.warn('[InventoryAgent] Event emit error:', err.message));
     }));
     if(errors.length > 0) {
       const err = new Error(errors.join(','));
@@ -363,21 +353,73 @@ const updateOrderProductStockStatus = async ({ tx, orderId, status }) => {
 
 const updateOrderStatusByPaymentId = async ({ paymentOrderId, status, stockStatus}) => {
   try {
-    return await prisma.$transaction(async (tx) => {
-      const order = await tx.order.update({ data: {status},where: { paymentOrderId }, include: { user: { select: {name: true, email: true}} }});
-      if(!order){
+    const { order, isFirstPlacedTransition, productsToNotify } = await prisma.$transaction(async (tx) => {
+      const existingOrder = await tx.order.findUnique({
+        where: { paymentOrderId },
+        select: { id: true, status: true },
+      });
+      if (!existingOrder) {
         throw new Error("Order not found");
       }
-      await updateOrderProductStockStatus({ tx, orderId: order.id, status: stockStatus })
-      await tx.orderStatusHistory.create({ 
-          data: { orderId: order.id, status, userId: order.userId }
-      })
-      return order;
-    })
+
+      const isFirstPlacedTransition = existingOrder.status !== ORDER_STATUS.PLACED && status === ORDER_STATUS.PLACED;
+
+      const order = await tx.order.update({
+        data: { status },
+        where: { paymentOrderId },
+        include: {
+          user: { select: { name: true, email: true } },
+          orderProducts: {
+            include: {
+              product: {
+                select: { id: true, title: true, slug: true },
+              },
+            },
+          },
+        },
+      });
+
+      await updateOrderProductStockStatus({ tx, orderId: order.id, status: stockStatus });
+      await tx.orderStatusHistory.create({
+        data: { orderId: order.id, status, userId: order.userId },
+      });
+
+      let productsToNotify = [];
+      if (isFirstPlacedTransition) {
+        for (const op of order.orderProducts) {
+          const currentStock = await productService.getProductStockById({ productId: op.productId, tx });
+          productsToNotify.push({
+            slug: op.product.slug,
+            productName: op.product.title,
+            currentStock,
+            reorderThreshold: 10,
+          });
+        }
+      }
+
+      return { order, isFirstPlacedTransition, productsToNotify };
+    });
+
+    // Once payment has succeeded (order transitioned to PLACED), dispatch low stock event to Kafka multi-agent system
+    if (isFirstPlacedTransition && productsToNotify.length > 0) {
+      for (const item of productsToNotify) {
+        console.log(`[OrderPayment] Payment succeeded for order. Dispatched stock event for "${item.productName}" (Remaining stock: ${item.currentStock}, Threshold: ${item.reorderThreshold})`);
+        publishInventoryEvent({
+          slug: item.slug,
+          productName: item.productName,
+          sku: item.slug,
+          currentStock: item.currentStock,
+          reorderThreshold: item.reorderThreshold,
+        }).catch((err) => console.warn('[InventoryAgent] Event emit error on payment success:', err.message));
+      }
+    }
+
+    return order;
   } catch (error) {
-    
+    console.error("Error in updateOrderStatusByPaymentId:", error);
+    throw error;
   }
-}
+};
 
 const fetchOrderStatusAndUpdateDB = async (paymentOrderId) => {
   const razorpayOrder = await razorpayInstance.orders.fetch(paymentOrderId);

@@ -28,11 +28,13 @@ const getKafkaProducer = async () => {
       brokers,
       retry: { retries: 3 },
     });
-    kafkaProducer = kafka.producer();
-    await kafkaProducer.connect();
+    const producer = kafka.producer();
+    await producer.connect();
+    kafkaProducer = producer;
     console.log('[InventoryAgent] Connected to Apache Kafka broker at:', brokers.join(','));
     return kafkaProducer;
   } catch (err) {
+    kafkaProducer = null;
     console.warn('[InventoryAgent] Kafka client connection warning:', err.message);
     return null;
   }
@@ -116,6 +118,7 @@ export const publishInventoryEvent = async ({
 
     return payload;
   } catch (error) {
+    kafkaProducer = null;
     console.error(`[InventoryAgent] Error publishing inventory event for SKU=${itemSku}:`, error.message);
     return null;
   }

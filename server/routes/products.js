@@ -10,6 +10,9 @@ const router = express.Router();
 // Get all categories
 router.get("/active", productController.getActiveProducts);
 
+// Restock product stock (e.g. upon PO approval or supplier intake)
+router.post("/restock", productController.restockProduct);
+
 // Get single product by ID
 router.get("/admin/:slug", getAuthMiddleware([ROLE_TYPES.ADMIN]), productController.getProductBySlugAdmin);
 router.get("/:slug", productController.getProductBySlug);

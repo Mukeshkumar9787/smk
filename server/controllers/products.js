@@ -254,6 +254,25 @@ const updateProductReviewVisibility = async (req, res) => {
   }
 };
 
+const restockProduct = async (req, res) => {
+  try {
+    const { slug, productId, quantity, poNumber } = req.body;
+    const result = await productService.restockProduct({
+      slug,
+      productId,
+      quantity,
+      poNumber,
+    });
+    return res.status(200).json({
+      success: true,
+      message: `Product stock replenished (+${result.addedQuantity} units)`,
+      data: result,
+    });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
 export default {
   createProduct,
   getProducts,
@@ -270,4 +289,5 @@ export default {
   deleteMyProductReview,
   getProductReviewsAdmin,
   updateProductReviewVisibility,
+  restockProduct,
 };

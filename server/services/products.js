@@ -542,6 +542,97 @@ const sendRestockNotifications = async ({ id, title, slug }) => {
   );
 };
 
+/**
+ * Restock / create stock for a product upon PO approval or manual restock.
+ */
+const restockProduct = async ({ slug, productId, quantity, poNumber = null }) => {
+  const qty = parseInt(quantity, 10);
+  if (isNaN(qty) || qty <= 0) {
+    const err = new Error("Invalid restock quantity. Must be a positive integer.");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (qty >= 20) {
+    const err = new Error("Quantity of products to be added should be less than 20.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let product = null;
+  if (productId) {
+    product = await prisma.product.findUnique({
+      where: { id: parseInt(productId, 10) },
+      select: { id: true, title: true, slug: true, status: true },
+    });
+  }
+  if (!product && slug) {
+    const trimmedSlug = String(slug).trim();
+    product = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { slug: trimmedSlug },
+          { slug: { equals: trimmedSlug, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, title: true, slug: true, status: true },
+    });
+    if (!product && (trimmedSlug.toUpperCase().startsWith("PROD-") || trimmedSlug.toUpperCase().startsWith("PROD_"))) {
+      const parsedId = parseInt(trimmedSlug.replace(/PROD[-_]/i, ""), 10);
+      if (!isNaN(parsedId)) {
+        product = await prisma.product.findUnique({
+          where: { id: parsedId },
+          select: { id: true, title: true, slug: true, status: true },
+        });
+      }
+    }
+  }
+
+  if (!product) {
+    const err = new Error(`Product not found for identifier: '${slug || productId}'`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const previousStock = await getProductStockById({ productId: product.id });
+
+  // Create Stock record with type PRODUCT (increments stock in inventory queries)
+  const stockRecord = await prisma.stock.create({
+    data: {
+      type: STOCK_TYPES.PRODUCT,
+      productId: product.id,
+      quantity: qty,
+    },
+  });
+
+  const currentStock = await getProductStockById({ productId: product.id });
+
+  // If previous stock was 0, send restock email notifications to subscribed users
+  if (previousStock === 0) {
+    try {
+      await sendRestockNotifications({
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+      });
+    } catch (notifyErr) {
+      console.warn(`[Restock] Notification error for product ${product.id}:`, notifyErr.message);
+    }
+  }
+
+  console.log(`[Restock] Successfully added ${qty} units for "${product.title}" (ID: ${product.id}). Stock: ${previousStock} -> ${currentStock}. PO: ${poNumber || 'N/A'}`);
+
+  return {
+    productId: product.id,
+    title: product.title,
+    slug: product.slug,
+    addedQuantity: qty,
+    previousStock,
+    currentStock,
+    stockId: stockRecord.id,
+    poNumber,
+  };
+};
+
 export default {
   createProduct,
   getProducts,
@@ -557,4 +648,5 @@ export default {
   updateProductReviewByUser,
   deleteProductReviewByUser,
   updateProductReviewVisibility,
+  restockProduct,
 };
