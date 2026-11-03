@@ -15,6 +15,7 @@ SMK is a full-stack e-commerce application with a customer storefront, checkout 
 - Admin dashboard with product, category, size, color, HSN, user, order, company-information, courier, and shipping configuration management
 - Admin order status updates and role management
 - Audit logging for API activity and audit-log statistics
+- Autonomous inventory agent integration: Emits low-stock Kafka events upon customer order placement and consumes agent replenishment events to automatically restock products and notify subscribed customers
 - File uploads using Cloudflare R2-compatible object storage, with signed upload/download support
 - Email delivery through SMTP for OTP and application messages
 
@@ -35,6 +36,7 @@ SMK is a full-stack e-commerce application with a customer storefront, checkout 
 - Node.js with Express 5 using ES modules
 - Prisma ORM 7
 - PostgreSQL 15
+- Apache Kafka client (`kafkajs`) for event-driven autonomous inventory replenishment
 - JWT authentication, bcrypt password hashing, Joi validation, Helmet, CORS, and Morgan logging
 - Razorpay server SDK for payment order creation and verification
 - Nodemailer for SMTP email
@@ -106,10 +108,114 @@ The server template is available at [`server/env.example`](server/env.example). 
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | OTP and email delivery |
 | `R2_*` | Optional Cloudflare R2-compatible file storage |
 | `GOOGLE_CLIENT_ID` | Server-side Google token verification |
+| `INVENTORY_AGENT_ENABLED` | Feature flag to enable Kafka stock event publishing & replenishment consumer (`true`/`1`) |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker endpoints (e.g., `localhost:9092` or managed Kafka broker) |
+| `KAFKA_TOPIC_INVENTORY_EVENTS` | Kafka topic for outbound low-stock events (defaults to `inventory-events`) |
+| `KAFKA_TOPIC_RESTOCK_EVENTS` | Kafka topic for inbound stock replenishment events (defaults to `inventory-restock`) |
+| `KAFKA_RESTOCK_CONSUMER_GROUP_ID` | Consumer group ID for backend restock listener (defaults to `smk-backend-restock-group`) |
+| `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM` | Optional Kafka SASL/SSL authentication settings for cloud brokers |
+| `KAFKA_USERNAME`, `KAFKA_PASSWORD`, `KAFKA_CA_PATH` | Optional credentials & CA cert for secure Kafka connections |
 
 The frontend uses `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`, `NEXT_PUBLIC_RAZORPAY_CHECKOUT_LINK`, `NEXT_PUBLIC_PAYMENT_TIMEOUT_SECONDS`, and `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
 Do not commit real credentials or private environment files.
+
+## 🔄 Kafka Event-Driven Autonomous Procurement Workflow
+
+SMK integrates with an autonomous multi-agent procurement system ([`ecommerce-agents`](../ecommerce-agents)) via **Apache Kafka**. This creates a fully automated, closed-loop inventory replenishment cycle:
+
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   SMK STOREFRONT & BACKEND                             │
+│                                                                                        │
+│  [Customer Checkout]                                                                   │
+│          │                                                                             │
+│          ▼ (Payment Success)                                                           │
+│  [Stock Decremented in DB]                                                             │
+│          │                                                                             │
+│          ▼ (publishInventoryEvent)                                                     │
+│   Kafka Topic: `inventory-events` ────────┐                                            │
+│                                           │                                            │
+│                                           ▼                                            │
+│                       ┌───────────────────────────────────────┐                        │
+│                       │    AUTONOMOUS PROCUREMENT AGENTS      │                        │
+│                       │      (`ecommerce-agents` service)     │                        │
+│                       │                                       │                        │
+│                       │  1. Deterministic Zero-Token Filter   │                        │
+│                       │  2. Inventory Analyst (Sales Burn Rate)                        │
+│                       │  3. PO Manager (Draft PO Generation)  │                        │
+│                       │  4. Slack / UI Human Approval (HITL)  │                        │
+│                       └───────────────────┬───────────────────┘                        │
+│                                           │                                            │
+│   Kafka Topic: `inventory-restock` ◄──────┘ (produce_restock_event upon approval)     │
+│          │                                                                             │
+│          ▼ (startRestockConsumer)                                                      │
+│  [Restock Consumer: validate qty < 20]                                                 │
+│          │                                                                             │
+│          ▼ (productService.restockProduct)                                             │
+│  [Database Stock Incremented] ───► [Trigger Customer Restock Email Notifications]      │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1. How Kafka Events Trigger the Workflow (Outbound Trigger)
+
+When a customer places an order and payment is verified via Razorpay:
+1. **Stock Decrement**: In [`server/services/orders.js`](server/services/orders.js), the order transitions to `PLACED` within a database transaction, decrementing product inventory.
+2. **Feature Flag Check**: The backend verifies `INVENTORY_AGENT_ENABLED=true` (or `INVENTORY_AGENT=enabled`).
+3. **Event Dispatch**: [`server/services/inventoryAgentProducer.js`](server/services/inventoryAgentProducer.js) dispatches an inventory level event to Kafka topic `inventory-events`:
+   - Partition key: Product `slug` or `sku`.
+   - Payload schema:
+     ```json
+     {
+       "event_id": "evt-1730635200000-abc123",
+       "timestamp": "2026-11-03T12:00:00.000Z",
+       "sku": "classic-heavyweight-cotton-t-shirt",
+       "slug": "classic-heavyweight-cotton-t-shirt",
+       "product_id": 101,
+       "product_name": "Classic Heavyweight Cotton T-Shirt",
+       "current_stock": 4,
+       "reorder_threshold": 10
+     }
+     ```
+4. **Mock ERP Sync**: The producer also pushes an asynchronous activity record to the Mock ERP dashboard (`http://localhost:8002/api/v1/activities`) so administrators see real-time order depletion on the command center monitor.
+
+### 2. Multi-Agent Processing & Human-in-the-Loop Approval
+
+Once published to `inventory-events`, the external [`ecommerce-agents`](../ecommerce-agents) system ingests the message:
+- **Zero-Token Pre-Filter**: If remaining stock is healthy (`current_stock > reorder_threshold`) or if a draft PO is already pending for this SKU, the agent system skips processing immediately with zero LLM token cost.
+- **Agent Analysis**: If stock is low (`current_stock <= reorder_threshold`), the multi-agent graph calculates the optimal replenishment quantity based on 30-day sales velocity, supplier MOQ, and lead time.
+- **Draft PO & Human Approval**: The system creates a draft Purchase Order in the ERP and posts an interactive Block Kit approval card to Slack (`#procurement-alerts`) and the Command Center Web UI (`http://localhost:8002`). The workflow pauses for human decision (`interrupt_after=["po_manager"]`).
+
+### 3. How the Workflow Completes (Inbound Restock Consumer)
+
+When an authorized human clicks **"Approve Reorder"** in Slack or **"Approve"** on the Command Center UI:
+1. **PO Issuance**: The Purchase Order is updated to `ISSUED` status in the ERP.
+2. **Restock Event Published**: The agent system dispatches a replenishment event to Kafka topic `inventory-restock` using [`produce_restock_event`](../ecommerce-agents/src/tools/ecommerce.py).
+   - Payload schema:
+     ```json
+     {
+       "event_id": "restock-a1b2c3d4",
+       "event_type": "STOCK_RESTOCK",
+       "action": "RESTOCK",
+       "timestamp": "2026-11-03T12:05:00.000Z",
+       "slug": "classic-heavyweight-cotton-t-shirt",
+       "sku": "classic-heavyweight-cotton-t-shirt",
+       "productId": 101,
+       "quantity": 19,
+       "po_number": "PO-9142",
+       "poNumber": "PO-9142"
+     }
+     ```
+3. **Consumer Ingestion**: On SMK server startup, [`server/services/inventoryRestockConsumer.js`](server/services/inventoryRestockConsumer.js) initiates a persistent consumer connected as consumer group `smk-backend-restock-group` subscribed to `inventory-restock`.
+4. **Business Policy Enforcement**:
+   - The consumer enforces the business constraint that replenishment additions per order must be strictly **less than 20 units** (capping quantity to `19` if any higher value is received).
+5. **Database Stock Update**: The consumer executes [`productService.restockProduct(...)`](server/services/products.js):
+   - Inserts a new `Stock` record of type `PRODUCT` with the replenished quantity into PostgreSQL via Prisma.
+   - Computes updated available stock.
+6. **Customer Notifications**: If the product was previously out of stock (`previousStock === 0`), `sendRestockNotifications` automatically sends back-in-stock notification emails to all customers registered on the product's waiting list.
+7. **Cycle Completed**: The store catalog reflects the new inventory level in real time without requiring any manual database edits or HTTP restock endpoints.
+
+---
 
 ## Database
 
