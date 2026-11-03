@@ -5,6 +5,8 @@
  * Respects INVENTORY_AGENT_ENABLED / INVENTORY_AGENT environment variables.
  */
 
+import { getKafkaConfig } from "../utils/kafkaConfig.js";
+
 let kafkaProducer = null;
 
 export const isInventoryAgentEnabled = () => {
@@ -22,55 +24,8 @@ const getKafkaProducer = async () => {
 
   try {
     const { Kafka } = await import('kafkajs');
+    const kafkaConfig = getKafkaConfig('ecommerce-store-backend-producer');
     const brokers = (process.env.KAFKA_BOOTSTRAP_SERVERS || 'localhost:9092').split(',');
-    const kafkaConfig = {
-      clientId: 'ecommerce-store-backend',
-      brokers,
-      retry: { retries: 3 },
-    };
-
-    // Configure SASL Authentication if credentials exist
-    if (process.env.KAFKA_USERNAME && process.env.KAFKA_PASSWORD) {
-      const mechanism = (process.env.KAFKA_SASL_MECHANISM || 'plain').toLowerCase();
-      kafkaConfig.sasl = {
-        mechanism,
-        username: process.env.KAFKA_USERNAME,
-        password: process.env.KAFKA_PASSWORD,
-      };
-    }
-
-    // Configure SSL & CA Certificate if SSL enabled or CA provided
-    const isSslRequested = 
-      (process.env.KAFKA_SECURITY_PROTOCOL || '').toUpperCase().includes('SSL') ||
-      Boolean(process.env.KAFKA_CA_PATH || process.env.KAFKA_CA_CERT) ||
-      (process.env.KAFKA_USERNAME && (process.env.KAFKA_SECURITY_PROTOCOL || 'SASL_SSL').toUpperCase() !== 'SASL_PLAINTEXT');
-
-    if (isSslRequested) {
-      const fs = await import('fs');
-      let caCert = null;
-      if (process.env.KAFKA_CA_PATH && fs.existsSync(process.env.KAFKA_CA_PATH)) {
-        caCert = fs.readFileSync(process.env.KAFKA_CA_PATH, 'utf-8');
-      } else if (process.env.KAFKA_CA_CERT) {
-        caCert = process.env.KAFKA_CA_CERT;
-      }
-
-      if (caCert) {
-        kafkaConfig.ssl = {
-          rejectUnauthorized: true,
-          ca: [caCert],
-        };
-        // Optional client certificates for mTLS
-        if (process.env.KAFKA_CLIENT_CERT_PATH && fs.existsSync(process.env.KAFKA_CLIENT_CERT_PATH)) {
-          kafkaConfig.ssl.cert = fs.readFileSync(process.env.KAFKA_CLIENT_CERT_PATH, 'utf-8');
-        }
-        if (process.env.KAFKA_CLIENT_KEY_PATH && fs.existsSync(process.env.KAFKA_CLIENT_KEY_PATH)) {
-          kafkaConfig.ssl.key = fs.readFileSync(process.env.KAFKA_CLIENT_KEY_PATH, 'utf-8');
-        }
-      } else {
-        kafkaConfig.ssl = true;
-      }
-    }
-
     const kafka = new Kafka(kafkaConfig);
     const producer = kafka.producer();
     await producer.connect();

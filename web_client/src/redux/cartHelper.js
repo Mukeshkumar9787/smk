@@ -2,7 +2,6 @@
 export const loadCartFromStorage = () => {
   try {
     const serializedState = localStorage.getItem("cart");
-    console.log(serializedState, 'serializedState')
     if (!serializedState) return {items: []};
     return JSON.parse(serializedState);
   } catch {

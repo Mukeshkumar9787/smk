@@ -256,7 +256,11 @@ const updateProductReviewVisibility = async (req, res) => {
 
 const restockProduct = async (req, res) => {
   try {
-    const { slug, productId, quantity, poNumber } = req.body;
+    const slug = req.body.slug || req.body.sku;
+    const productId = req.body.productId || req.body.product_id || req.body.id;
+    const quantity = req.body.quantity ?? req.body.qty;
+    const poNumber = req.body.poNumber || req.body.po_number || null;
+
     const result = await productService.restockProduct({
       slug,
       productId,

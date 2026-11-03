@@ -300,8 +300,13 @@ export const reviewVisibilitySchema = Joi.object({
 
 export const restockProductSchema = Joi.object({
   slug: Joi.string().trim().optional(),
+  sku: Joi.string().trim().optional(),
   productId: Joi.alternatives().try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/)).optional(),
-  quantity: Joi.number().integer().positive().max(19).required(),
+  product_id: Joi.alternatives().try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/)).optional(),
+  id: Joi.alternatives().try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/)).optional(),
+  quantity: Joi.number().integer().positive().max(19).optional(),
+  qty: Joi.number().integer().positive().max(19).optional(),
   poNumber: Joi.string().allow("", null).optional(),
-}).or("slug", "productId");
+  po_number: Joi.string().allow("", null).optional(),
+}).or("slug", "sku", "productId", "product_id", "id").or("quantity", "qty");
 

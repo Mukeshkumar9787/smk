@@ -30,7 +30,12 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const product = useAppSelector((state) => state.cartReducer.items);
   const wishlist = useAppSelector((state) => state.wishlistReducer.items);
@@ -331,8 +336,8 @@ const Header = () => {
                       />
                     </svg>
 
-                    {product.length > 0 && (
-                      <span suppressHydrationWarning className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
+                    {mounted && product.length > 0 && (
+                      <span className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
                         {product.length}
                       </span>
                     )}
@@ -348,8 +353,8 @@ const Header = () => {
                         fill="#3C50E0"
                       />
                     </svg>
-                    {wishlist.length > 0 && (
-                      <span suppressHydrationWarning className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
+                    {mounted && wishlist.length > 0 && (
+                      <span className="flex items-center justify-center font-medium text-2xs absolute -right-2 -top-2.5 bg-blue w-4.5 h-4.5 rounded-full text-white">
                         {wishlist.length}
                       </span>
                     )}

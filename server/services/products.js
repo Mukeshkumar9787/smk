@@ -585,6 +585,21 @@ const restockProduct = async ({ slug, productId, quantity, poNumber = null }) =>
         });
       }
     }
+    if (!product && /^\d+$/.test(trimmedSlug)) {
+      const parsedId = parseInt(trimmedSlug, 10);
+      product = await prisma.product.findUnique({
+        where: { id: parsedId },
+        select: { id: true, title: true, slug: true, status: true },
+      });
+    }
+    if (!product) {
+      product = await prisma.product.findFirst({
+        where: {
+          title: { equals: trimmedSlug, mode: 'insensitive' },
+        },
+        select: { id: true, title: true, slug: true, status: true },
+      });
+    }
   }
 
   if (!product) {

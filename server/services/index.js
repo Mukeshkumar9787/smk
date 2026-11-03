@@ -7,3 +7,5 @@ export { default as sizeService } from "./size.js";
 export { default as colorService } from "./color.js";
 export { default as userService } from "./users.js";
 export { default as configService } from "./config.js";
+export { default as inventoryAgentProducer } from "./inventoryAgentProducer.js";
+export { default as inventoryRestockConsumer } from "./inventoryRestockConsumer.js";
