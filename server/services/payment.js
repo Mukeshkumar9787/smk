@@ -10,13 +10,14 @@ export const razorpayInstance = new Razorpay({
 export const createPayment = async ({ amount }) => {
     try {
       const options = {
-        amount: amount * 100, // convert to paisa
+        amount: Math.round(Number(amount) * 100), // convert to paisa (must be an integer)
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
       };
       const payment = await razorpayInstance.orders.create(options);
       return payment;
     } catch (error) {
-      throw new Error("Failed to initialize payment")      
+      console.error("Failed to initialize payment with Razorpay:", error);
+      throw new Error("Failed to initialize payment");
     }
 }

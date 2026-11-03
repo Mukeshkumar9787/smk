@@ -58,6 +58,15 @@ app.use((err, req, res, next) => {
 // -------------------------
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, (err) => {
+  if (err) {
+    console.error(`❌ Failed to start server on port ${PORT}:`, err);
+    process.exit(1);
+  }
   console.log(`🚀 Server running on ${process.env.SERVER_ADDRESS}`);
+});
+
+server.on('error', (err) => {
+  console.error(`❌ Server error:`, err);
+  process.exit(1);
 });
