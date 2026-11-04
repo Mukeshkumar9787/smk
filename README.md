@@ -1,6 +1,20 @@
 # SMK
 
-SMK is a full-stack e-commerce application with a customer storefront, checkout flow, and role-protected administration features.
+[![Storefront Deployment](https://img.shields.io/badge/Storefront-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://smk-tan.vercel.app/)
+[![Agents Deployment](https://img.shields.io/badge/Multi--Agent%20System-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ecommerce-agents.onrender.com)
+
+> **SMK** is a production-grade, full-stack e-commerce application with a customer storefront, checkout flow, role-protected administration features, and autonomous inventory replenishment powered by event-driven multi-agent AI.
+
+---
+
+## 🌐 Live Deployments & Quick Access
+
+| Service | Environment / Platform | Direct URL | Description |
+| :--- | :--- | :--- | :--- |
+| **🛍️ SMK Storefront & Customer Web App** | **Vercel** | [https://smk-tan.vercel.app/](https://smk-tan.vercel.app/) | Live production customer storefront, catalog browsing, cart, and checkout. |
+| **🤖 Autonomous Procurement Multi-Agent Hub** | **Render** | [https://ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) | Real-time multi-agent command center, PO approval UI, and ERP datastore. |
+
+---
 
 ## Features
 
@@ -108,6 +122,7 @@ The server template is available at [`server/env.example`](server/env.example). 
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | OTP and email delivery |
 | `R2_*` | Optional Cloudflare R2-compatible file storage |
 | `GOOGLE_CLIENT_ID` | Server-side Google token verification |
+| `MOCK_ERP_URL` | URL of the autonomous procurement agent / ERP service (defaults to `http://localhost:8002`, production: `https://ecommerce-agents.onrender.com`) |
 | `INVENTORY_AGENT_ENABLED` | Feature flag to enable Kafka stock event publishing & replenishment consumer (`true`/`1`) |
 | `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker endpoints (e.g., `localhost:9092` or managed Kafka broker) |
 | `KAFKA_TOPIC_INVENTORY_EVENTS` | Kafka topic for outbound low-stock events (defaults to `inventory-events`) |
@@ -177,18 +192,18 @@ When a customer places an order and payment is verified via Razorpay:
        "reorder_threshold": 10
      }
      ```
-4. **Mock ERP Sync**: The producer also pushes an asynchronous activity record to the Mock ERP dashboard (`http://localhost:8002/api/v1/activities`) so administrators see real-time order depletion on the command center monitor.
+4. **Mock ERP Sync**: The producer also pushes an asynchronous activity record to the Mock ERP dashboard ([`https://ecommerce-agents.onrender.com/api/v1/activities`](https://ecommerce-agents.onrender.com/api/v1/activities) in production, or `http://localhost:8002/api/v1/activities` locally) so administrators see real-time order depletion on the command center monitor.
 
 ### 2. Multi-Agent Processing & Human-in-the-Loop Approval
 
 Once published to `inventory-events`, the external [`ecommerce-agents`](../ecommerce-agents) system ingests the message:
 - **Zero-Token Pre-Filter**: If remaining stock is healthy (`current_stock > reorder_threshold`) or if a draft PO is already pending for this SKU, the agent system skips processing immediately with zero LLM token cost.
 - **Agent Analysis**: If stock is low (`current_stock <= reorder_threshold`), the multi-agent graph calculates the optimal replenishment quantity based on 30-day sales velocity, supplier MOQ, and lead time.
-- **Draft PO & Human Approval**: The system creates a draft Purchase Order in the ERP and posts an interactive Block Kit approval card to Slack (`#procurement-alerts`) and the Command Center Web UI (`http://localhost:8002`). The workflow pauses for human decision (`interrupt_after=["po_manager"]`).
+- **Draft PO & Human Approval**: The system creates a draft Purchase Order in the ERP and posts an interactive Block Kit approval card to Slack (`#procurement-alerts`) and the Command Center Web UI ([`https://ecommerce-agents.onrender.com`](https://ecommerce-agents.onrender.com) or `http://localhost:8002`). The workflow pauses for human decision (`interrupt_after=["po_manager"]`).
 
 ### 3. How the Workflow Completes (Inbound Restock Consumer)
 
-When an authorized human clicks **"Approve Reorder"** in Slack or **"Approve"** on the Command Center UI:
+When an authorized human clicks **"Approve Reorder"** in Slack or **"Approve"** on the Command Center UI ([`https://ecommerce-agents.onrender.com`](https://ecommerce-agents.onrender.com) / `http://localhost:8002`):
 1. **PO Issuance**: The Purchase Order is updated to `ISSUED` status in the ERP.
 2. **Restock Event Published**: The agent system dispatches a replenishment event to Kafka topic `inventory-restock` using [`produce_restock_event`](../ecommerce-agents/src/tools/ecommerce.py).
    - Payload schema:
