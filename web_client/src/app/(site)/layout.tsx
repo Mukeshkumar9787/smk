@@ -25,6 +25,7 @@ import ScrollToTop from "@/components/Common/ScrollToTop";
 import CartSync from "@/components/Common/CartSync";
 import WishlistSync from "@/components/Common/WishlistSync";
 import ServerOfflineBanner from "@/components/Common/ServerOfflineBanner";
+import ChatbotAssistant from "@/components/Common/ChatbotAssistant";
 
 export default function RootLayout({
   children,
@@ -135,6 +136,7 @@ export default function RootLayout({
         </GoogleOAuthProvider>
         <ScrollToTop />
         <Footer />
+        <ChatbotAssistant />
       </body>
     </html>
   );
