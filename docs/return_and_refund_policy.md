@@ -30,7 +30,7 @@ To qualify for a return or exchange:
 ---
 
 ## 3. How to Initiate a Return or Exchange
-1. Log in to your customer account at [https://smk-tan.vercel.app/profile/orders](https://smk-tan.vercel.app/profile/orders).
+1. Log in to your customer account at [https://smk-tan.vercel.app/my-account](https://smk-tan.vercel.app/my-account).
 2. Select the order containing the item you wish to return.
 3. Click **"Request Return / Exchange"**.
 4. Select the reason for return and choose either:

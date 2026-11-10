@@ -41,7 +41,7 @@ SMK fulfills orders from regional fulfillment hubs across India to ensure the fa
 All shipments are dispatched via verified tier-1 logistics partners:
 - **Primary Courier Partners:** BlueDart Express, Delhivery, XpressBees, DTDC, and Shadowfax.
 - **Real-Time Tracking:** Upon dispatch from our warehouse, you will receive an SMS and email notification with an active AWB tracking number.
-- **Tracking URL:** You can track shipment milestones live at [https://smk-tan.vercel.app/orders](https://smk-tan.vercel.app/orders) or directly on the courier partner's portal.
+- **Tracking URL:** You can track shipment milestones live under your customer account at [https://smk-tan.vercel.app/my-account](https://smk-tan.vercel.app/my-account) or directly on the courier partner's portal.
 
 ---
 

@@ -29,7 +29,7 @@ All transactions on SMK are processed through PCI-DSS Level 1 compliant gateways
 
 ## 3. Modifying or Canceling an Order
 
-- **Self-Service Cancellation:** Orders can be canceled directly from your account page within **2 hours** of placement, provided the status is still **"Processing"** or **"Confirmed"**.
+- **Self-Service Cancellation:** Orders can be canceled directly from your account page at [https://smk-tan.vercel.app/my-account](https://smk-tan.vercel.app/my-account) within **2 hours** of placement, provided the status is still **"Processing"** or **"Confirmed"**.
 - **After Dispatch:** Once an order moves to **"Shipped"** with an assigned courier AWB, cancellation is no longer possible. You may refuse delivery at the doorstep or initiate a 30-day return upon receipt.
 - **Address Changes:** Contact live support immediately within 1 hour of placing the order to update delivery address or phone number prior to warehouse packing.
 
