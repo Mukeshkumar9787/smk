@@ -2,12 +2,18 @@ import React from "react";
 import Image from "next/image";
 import { getConfig } from "@/http/apiCalls";
 import { CONFIG_KEYS } from "@/utils/constants";
+import { getStoredToken } from "@/utils/helper";
 import ContactInfo from "../Common/ContactInfo";
 
 const Footer = () => {
   const year = new Date().getFullYear();
 
   const [compInfo, setCompInfo] = React.useState<any>({});
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsLoggedIn(Boolean(getStoredToken()));
+  }, []);
 
   const fetchConfig = React.useCallback(async () => {
     try {
@@ -168,14 +174,23 @@ const Footer = () => {
             </h2>
 
             <ul className="flex flex-col gap-3.5">
+              {isLoggedIn && (
+                <>
+                  <li>
+                    <a className="ease-out duration-200 hover:text-blue" href="/orders">
+                      Orders
+                    </a>
+                  </li>
+                  <li>
+                    <a className="ease-out duration-200 hover:text-blue" href="/my-account">
+                      My Account
+                    </a>
+                  </li>
+                </>
+              )}
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="/my-account">
-                  My Account
-                </a>
-              </li>
-              <li>
-                <a className="ease-out duration-200 hover:text-blue" href="/signin">
-                  Login / Register
+                <a className="ease-out duration-200 hover:text-blue" href={isLoggedIn ? "/my-account" : "/signin"}>
+                  {isLoggedIn ? "Account Details" : "Login / Register"}
                 </a>
               </li>
               <li>

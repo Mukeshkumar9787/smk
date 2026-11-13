@@ -135,6 +135,7 @@ const getOrders = async ({ userId=null, skip=0, take=10, search=null, status=nul
         totalAmount: i.totalAmount,
         shippingAmount: i.shippingAmount,
         dispute: i.additionalInfo?.dispute || null,
+        additionalInfo: i.additionalInfo || null,
       }
     )),
     totalCount

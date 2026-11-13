@@ -4,12 +4,13 @@ import validateInput from "../middlewares/requestValidationMiddleware.js";
 import { createOrderDisputeSchema, createOrderSchema, updateOrderSchema, updateOrderStatusSchema } from "../utils/validation.js";
 import { getAuthMiddleware } from "../middlewares/authMiddleware.js";
 import { ROLE_TYPES } from "../utils/constants.js";
+import { ordersRateLimiter } from "../middlewares/rateLimitMiddleware.js";
 
 const router = express.Router();
 
 router.post("/payment/verify", orderController.verifyPayment);
 
-router.post("/",getAuthMiddleware(), validateInput(createOrderSchema), orderController.createOrder);
+router.post("/", ordersRateLimiter, getAuthMiddleware(), validateInput(createOrderSchema), orderController.createOrder);
 
 router.get("/",getAuthMiddleware(), orderController.getOrdersByUserId);
 

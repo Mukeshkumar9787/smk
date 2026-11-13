@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import Breadcrumb from "../Common/Breadcrumb";
 import { getConfig } from "@/http/apiCalls";
 import { CONFIG_KEYS } from "@/utils/constants";
 
@@ -90,8 +89,6 @@ const Contact = () => {
 
   return (
     <>
-      <Breadcrumb title="Contact" pages={["contact"]} />
-
       <section className="page-section">
         <div className="mx-auto flex w-full max-w-[1170px] flex-col gap-8 px-4 sm:px-8 xl:px-0">
           <div className="overflow-hidden rounded-[34px] border border-sky-100 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_28%),linear-gradient(135deg,#ffffff_0%,#f7fbff_52%,#eef6ff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-8 xl:p-10">

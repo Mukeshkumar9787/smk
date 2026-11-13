@@ -224,7 +224,7 @@ const AdminOrders = () => {
                 )}
               />
               <div className="hidden md:block">
-                <Table className="admin-data-table" dataSource={orderItems} columns={columns} rowKey="id"
+                <Table className="admin-data-table" dataSource={orderItems} columns={columns as any} rowKey="id"
                   size="middle"
                   scroll={{ x: 980 }}
                   pagination={{

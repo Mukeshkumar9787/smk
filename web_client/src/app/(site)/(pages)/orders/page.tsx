@@ -1,16 +1,14 @@
 import React from "react";
 import { Metadata } from "next";
-import AdminOrders from "@/components/AdminOrders";
+import OrdersHub from "@/components/Orders/OrdersHub";
+
 export const metadata: Metadata = {
-  title: "Orders List",
+  title: "Orders | SMK Store",
+  description: "Track your orders, view delivery milestones, and inspect invoices.",
 };
 
-const OrdersList = () => {
-  return (
-    <>
-      <AdminOrders />
-    </>
-  );
+const OrdersPage = () => {
+  return <OrdersHub />;
 };
 
-export default OrdersList;
+export default OrdersPage;

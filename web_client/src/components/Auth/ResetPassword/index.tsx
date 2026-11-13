@@ -1,18 +1,26 @@
 "use client"
 import React, { useRef, useState } from "react";
-import Breadcrumb from "@/components/Common/Breadcrumb";
 import { resetPassword } from "@/http/apiCalls";
 import { getAlertContent, PASSWORD_MIN_LENGTH, PASSWORD_REGEX, VERIFY_OTP_TYPES } from "@/utils/constants";
 import Link from "next/link";
 import VerifyOTP from "../VerifyOTP";
 import ModalInfo from "@/components/Common/ModalInfo";
 import PasswordInput from "@/components/Common/PasswordInput";
+import { rateLimitManager } from "@/http/rateLimitManager";
 
 const ResetPassword = ({ email = '', nestedForm=false }) => {
   const [resetFormValue, setResetFormValue] = useState(false);
   const [alert, setAlert] = useState(null);
   const [enterOTP, setEnterOTP] = useState(false);
+  const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
   const emailRef = useRef(email);
+
+  React.useEffect(() => {
+    const unsub = rateLimitManager.subscribe((st) => {
+      setRateLimitSeconds(st.isRateLimited ? st.retryAfter : 0);
+    });
+    return unsub;
+  }, []);
 
   const handleSubmit = async(e) => {
     try {
@@ -20,7 +28,7 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
       const formData = new FormData(e.target);
       const values = Object.fromEntries(formData.entries());
 
-      if(!PASSWORD_REGEX.test(values.password)){
+      if(!PASSWORD_REGEX.test(values.password.toString())){
         setAlert('regex');
         return
       }
@@ -59,7 +67,6 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
       <ModalInfo isOpen={alert} content={getAlertContent(alert)} onClose={()=> {setAlert(null)}} onOk={()=> {setAlert(null)}}  />
       {enterOTP && <VerifyOTP isOpen={enterOTP} sentTo={emailRef.current} 
       onClose={onOTPVerificationClose} type={VERIFY_OTP_TYPES.RESET_PASSWORD} resendOtp={resendOtp} nestedForm={nestedForm} /> }
-      {!nestedForm && <Breadcrumb title={"Reset Password"} pages={["Reset Password"]} /> }
       <section className={`${nestedForm ? "overflow-hidden bg-transparent" : "page-section"}`} key={`${resetFormValue}`}>
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="form-card max-w-[570px] w-full mx-auto">
@@ -126,9 +133,10 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
 
                 <button
                   type="submit"
-                  className="btn-primary mt-7.5 w-full"
+                  disabled={rateLimitSeconds > 0}
+                  className={`btn-primary mt-7.5 w-full ${rateLimitSeconds > 0 ? "opacity-60 cursor-not-allowed !bg-amber-600" : ""}`}
                 >
-                  Reset Password
+                  {rateLimitSeconds > 0 ? `Please wait ${rateLimitSeconds}s...` : "Reset Password"}
                 </button>
                 {!nestedForm && 
                   <>

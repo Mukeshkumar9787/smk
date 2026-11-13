@@ -47,17 +47,17 @@ const getHrefForLabel = (label) => {
 const Breadcrumb = ({
   title,
   pages,
-  adminOnly = false,
+  adminOnly = true,
   variant = "default",
   showTitle = true,
   className = "",
   tone = "default",
 }) => {
-  const [canRender, setCanRender] = React.useState(!adminOnly);
+  const [canRender, setCanRender] = React.useState(false);
 
   React.useEffect(() => {
     if (!adminOnly) {
-      setCanRender(true);
+      setCanRender(false);
       return;
     }
 

@@ -7,6 +7,7 @@ import morgan from "morgan";
 import cors from "cors";
 import router from "./routes/index.js";
 import { startRestockConsumer, stopRestockConsumer } from "./services/inventoryRestockConsumer.js";
+import { globalRateLimiter } from "./middlewares/rateLimitMiddleware.js";
 
 const app = express();
 
@@ -31,6 +32,9 @@ app.get(['/health', '/api/health'], (req, res) => {
     uptime: process.uptime(),
   });
 });
+
+// Apply global rate limiting across all API endpoints
+app.use('/api', globalRateLimiter);
 
 app.use('/api', router);
 

@@ -27,18 +27,20 @@ import { Input, Select } from "antd";
 import ModalInfo from "../Common/ModalInfo";
 import OrderStatusTimeline from "./OrderStatusHistory";
 import OrderInvoice from "./Invoice";
+const OrderInvoiceComponent: any = OrderInvoice;
 import { useReactToPrint } from "react-to-print";
 import CourierDetails from "./CourierDetails";
 import { notifyError, notifySuccess } from "@/utils/notify";
 
 const formatStatusLabel = (value) => value?.replaceAll("_", " ");
 
-const OrderDetails = ({ params }) => {
-  const [data, setData] = useState(null);
-  const [statusInfo, setStatusInfo] = useState(null);
-  const componentRef = useRef(null);
-  const [compInfo, setCompInfo] = React.useState({});
-  const [couriers, setCouriers] = useState([]);
+const OrderDetails = ({ params, orderNo, orderItem }: any) => {
+  const targetParams = params || { slug: orderNo || orderItem?.orderNo || orderItem?.slug };
+  const [data, setData] = useState<any>(null);
+  const [statusInfo, setStatusInfo] = useState<any>(null);
+  const componentRef = useRef<any>(null);
+  const [compInfo, setCompInfo] = React.useState<any>({});
+  const [couriers, setCouriers] = useState<any[]>([]);
   const [disputeMessage, setDisputeMessage] = useState("");
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
   const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
@@ -47,12 +49,13 @@ const OrderDetails = ({ params }) => {
   const handlePrint = useReactToPrint({ contentRef: componentRef });
 
   const fetchOrder = useCallback(async () => {
+    if (!targetParams?.slug) return;
     try {
       const userData = await getLoggedInUserData();
-      let response = null;
+      let response: any = null;
 
-      if (userData.role === ROLE_TYPES.ADMIN) {
-        response = await getOrderDetailsBySlugAdmin(params);
+      if (userData?.role === ROLE_TYPES.ADMIN) {
+        response = await getOrderDetailsBySlugAdmin(targetParams);
 
         const modifiedData = {
           ...response?.data,
@@ -62,17 +65,17 @@ const OrderDetails = ({ params }) => {
         setStatusInfo({ status: modifiedData?.status });
         setData(modifiedData);
       } else {
-        response = await getOrderDetailsBySlug(params);
+        response = await getOrderDetailsBySlug(targetParams);
         setData(response?.data);
       }
     } catch (error) {
       console.error("Failed to fetch order:", error);
     }
-  }, [params]);
+  }, [targetParams]);
 
   const handleUpdateStatus = async () => {
     try {
-      const response = await updateOrderStatusBySlugAdmin({ slug: params.slug, ...statusInfo });
+      const response = await updateOrderStatusBySlugAdmin({ slug: targetParams.slug, ...statusInfo });
       if (response.success) {
         notifySuccess("Order status changed successfully.");
         fetchOrder();
@@ -80,7 +83,7 @@ const OrderDetails = ({ params }) => {
     } catch (error) {}
   };
 
-  const handleUpdateOrder = async (e) => {
+  const handleUpdateOrder = async (e: any) => {
     try {
       e.preventDefault();
       if (!data?.additionalInfo?.courier) {
@@ -92,7 +95,7 @@ const OrderDetails = ({ params }) => {
         return;
       }
       const response = await updateOrderBySlugAdmin({
-        slug: params.slug,
+        slug: targetParams.slug,
         additionalInfo: data?.additionalInfo || {},
       });
       if (response.success) {
@@ -102,9 +105,9 @@ const OrderDetails = ({ params }) => {
     } catch (error) {}
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target;
-    setData((prev) => {
+    setData((prev: any) => {
       const additionalInfo = prev.additionalInfo || {};
       additionalInfo[name] = value;
       return { ...prev, additionalInfo };
@@ -121,7 +124,7 @@ const OrderDetails = ({ params }) => {
     try {
       setIsSubmittingDispute(true);
       const response = await raiseOrderDispute({
-        slug: params.slug,
+        slug: targetParams.slug,
         message: trimmedMessage,
       });
       if (response.success) {
@@ -193,7 +196,7 @@ const OrderDetails = ({ params }) => {
   return (
     <>
       <div ref={componentRef} className="hidden print:block print-only">
-        <OrderInvoice data={{ ...data, compInfo }} />
+        <OrderInvoiceComponent data={{ ...data, compInfo }} />
       </div>
       <section className="overflow-hidden bg-transparent py-12 pt-5">
         <div className="mx-auto w-full max-w-[1240px] px-4 sm:px-8 xl:px-0">

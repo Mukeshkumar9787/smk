@@ -25,7 +25,9 @@ import ScrollToTop from "@/components/Common/ScrollToTop";
 import CartSync from "@/components/Common/CartSync";
 import WishlistSync from "@/components/Common/WishlistSync";
 import ServerOfflineBanner from "@/components/Common/ServerOfflineBanner";
+import RateLimitBanner from "@/components/Common/RateLimitBanner";
 import ChatbotAssistant from "@/components/Common/ChatbotAssistant";
+import ButtonLoaderManager from "@/components/Common/ButtonLoaderManager";
 
 export default function RootLayout({
   children,
@@ -38,7 +40,7 @@ export default function RootLayout({
   const hasNavigatedRef = useRef(false);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isInitialMountRef = useRef(true);
+  const isPageLoadingRef = useRef(true); // true on initial mount and when navigating to new pages
   const [pendingGetRequests, setPendingGetRequests] = useState(0);
 
   useEffect(() => {
@@ -46,16 +48,73 @@ export default function RootLayout({
     return unsubscribe;
   }, []);
 
+  // Listen for clicks on navigation links to trigger global loader immediately on page navigation
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const anchor = target.closest("a") as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href");
+      if (!href) return;
+
+      if (
+        href.startsWith("#") ||
+        href.startsWith("mailto:") ||
+        href.startsWith("tel:") ||
+        anchor.target === "_blank" ||
+        anchor.hasAttribute("download")
+      ) {
+        return;
+      }
+
+      try {
+        const targetUrl = new URL(anchor.href, window.location.href);
+        if (
+          targetUrl.origin === window.location.origin &&
+          targetUrl.pathname !== window.location.pathname
+        ) {
+          isPageLoadingRef.current = true;
+          setPageLoading(true);
+          setShowLoader(true);
+          if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+          }
+        }
+      } catch (err) {}
+    };
+
+    document.addEventListener("click", handleLinkClick, true);
+    return () => {
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, []);
+
+  // Trigger global loader when pathname changes (new page loaded / route transition)
   useEffect(() => {
     if (!hasNavigatedRef.current) {
       hasNavigatedRef.current = true;
       return;
     }
+
+    isPageLoadingRef.current = true;
     setPageLoading(true);
+    setShowLoader(true);
+
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
     if (navTimerRef.current) {
       clearTimeout(navTimerRef.current);
     }
-    navTimerRef.current = setTimeout(() => setPageLoading(false), 300);
+    navTimerRef.current = setTimeout(() => {
+      setPageLoading(false);
+    }, 350);
+
     return () => {
       if (navTimerRef.current) {
         clearTimeout(navTimerRef.current);
@@ -63,27 +122,21 @@ export default function RootLayout({
     };
   }, [pathname]);
 
-  // Synchronize showLoader with pending requests and page transitions using a debounce buffer
+  // Global loader is shown for initial mount and when loading a new page until settled
   useEffect(() => {
-    const isBusy = pendingGetRequests > 0 || pageLoading;
+    if (!isPageLoadingRef.current) {
+      return;
+    }
 
-    if (isBusy) {
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
-      }
-      setShowLoader(true);
-    } else {
-      // Grace period to bridge micro-gaps between consecutive or chained API requests
-      const delay = isInitialMountRef.current ? 350 : 250;
+    if (!pageLoading && pendingGetRequests === 0) {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current);
       }
       hideTimerRef.current = setTimeout(() => {
-        isInitialMountRef.current = false;
+        isPageLoadingRef.current = false;
         setShowLoader(false);
         hideTimerRef.current = null;
-      }, delay);
+      }, 250);
     }
 
     return () => {
@@ -117,6 +170,7 @@ export default function RootLayout({
                 <ModalProvider>
                   <PreviewSliderProvider>
                     <ServerOfflineBanner />
+                    <RateLimitBanner />
                     <Header />
                     <main className="relative min-h-[70vh] bg-transparent">
                       <Suspense fallback={null}>
@@ -137,6 +191,7 @@ export default function RootLayout({
         <ScrollToTop />
         <Footer />
         <ChatbotAssistant />
+        <ButtonLoaderManager />
       </body>
     </html>
   );

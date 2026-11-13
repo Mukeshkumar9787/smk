@@ -83,6 +83,7 @@ export const loginSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(STATUS_TYPES))
     .default(STATUS_TYPES.ACTIVE),
+  turnstileToken: Joi.string().allow("", null).optional(),
 });
 
 export const registerSchema = Joi.object({
@@ -91,14 +92,16 @@ export const registerSchema = Joi.object({
   mobile: Joi.string().min(1).max(12).required(),
   password: Joi.string()
     .pattern(/^(?=.*[A-Z])(?=.*\d).{8,}$/)
-    .required()
+    .required(),
+  turnstileToken: Joi.string().allow("", null).optional(),
 });
 
 export const resetPasswordSchema = Joi.object({
   email: Joi.string().min(1).max(100).required(),
   password: Joi.string()
     .pattern(/^(?=.*[A-Z])(?=.*\d).{8,}$/)
-    .required()
+    .required(),
+  turnstileToken: Joi.string().allow("", null).optional(),
 });
 
 export const verifyOTPSchema = Joi.object({
@@ -106,6 +109,7 @@ export const verifyOTPSchema = Joi.object({
   type: Joi.string()
     .valid(...Object.values(OTP_TYPES)),
   otp: Joi.string().min(6).required(),
+  turnstileToken: Joi.string().allow("", null).optional(),
 });
 
 export const verifyGoogleTokenSchema = Joi.object({
@@ -114,6 +118,7 @@ export const verifyGoogleTokenSchema = Joi.object({
 
 export const loginWithOTPSchema = Joi.object({
   email: Joi.string().min(1).max(100).required(),
+  turnstileToken: Joi.string().allow("", null).optional(),
 });
 
 export const createOrderSchema = Joi.object({
@@ -186,7 +191,9 @@ export const createOrderSchema = Joi.object({
       })
     )
     .min(1)
-    .required()
+    .required(),
+
+  turnstileToken: Joi.string().allow('', null).optional()
 });
 
 export const updateOrderStatusSchema = Joi.object({

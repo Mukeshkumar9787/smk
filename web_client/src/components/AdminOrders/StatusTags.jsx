@@ -19,17 +19,29 @@ const StatusTags = ({ status, setStatus }) => {
     }, []);
 
     return (
-        <div className="flex gap-1 text-xs flex-wrap">
-            <div className="w-full sm:w-auto flex flex-row items-center gap-2" key={status}>
-                <button className={`p-3 rounded-full bg-white`} onClick={() => setStatus('')}
-                    style={{ border: status === '' ? '1px solid black' : 'none' }}>
-                    <div className="min-w-[88px] text-center">All ({Number(statusStats.ALL || 0)})</div>
+        <div className="flex gap-2 text-xs flex-wrap items-center">
+            <div key="all">
+                <button
+                    type="button"
+                    className="px-4 py-2 rounded-full bg-white transition hover:shadow-xs cursor-pointer"
+                    onClick={() => setStatus('')}
+                    style={{ border: status === '' ? '1px solid black' : '1px solid #e2e8f0' }}
+                >
+                    <div className="text-center font-medium">All ({Number(statusStats.ALL || 0)})</div>
                 </button>
             </div>
             {Object.values(ORDER_STATUS).map((orderStatus) => (
-                <div className="w-full sm:w-auto flex flex-row items-center gap-2" key={orderStatus}>
-                    <button className={`p-3 rounded-full`} style={{ ...ORDER_STATUS_COLOR[orderStatus], border: (orderStatus === status) ? '1px solid black' : 'none' }} onClick={() => setStatus(orderStatus)}>
-                        <div>{orderStatus} ({Number(statusStats[orderStatus] || 0)})</div>
+                <div key={orderStatus}>
+                    <button
+                        type="button"
+                        className="px-4 py-2 rounded-full transition hover:opacity-90 cursor-pointer"
+                        style={{
+                            ...ORDER_STATUS_COLOR[orderStatus],
+                            border: (orderStatus === status) ? '1px solid black' : '1px solid transparent'
+                        }}
+                        onClick={() => setStatus(orderStatus)}
+                    >
+                        <div className="font-medium capitalize">{orderStatus.replaceAll('_', ' ')} ({Number(statusStats[orderStatus] || 0)})</div>
                     </button>
                 </div>
             ))}

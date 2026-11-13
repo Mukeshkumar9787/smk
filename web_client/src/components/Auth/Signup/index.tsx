@@ -1,6 +1,5 @@
 "use client"
 import React, { useRef, useState } from "react";
-import Breadcrumb from "@/components/Common/Breadcrumb";
 import { register } from "@/http/apiCalls";
 import { getAlertContent, PASSWORD_MIN_LENGTH, PASSWORD_REGEX, VERIFY_OTP_TYPES } from "@/utils/constants";
 import Link from "next/link";
@@ -8,19 +7,34 @@ import VerifyOTP from "../VerifyOTP";
 import ModalInfo from "@/components/Common/ModalInfo";
 import PasswordInput from "@/components/Common/PasswordInput";
 import GoogleLoginButton from "../GoogleLoginButton";
+import TurnstileWidget, { TurnstileRef } from "@/components/Common/TurnstileWidget";
+import { rateLimitManager } from "@/http/rateLimitManager";
 
 const Signup = () => {
   const [alert, setAlert] = useState(null);
   const [enterOTP, setEnterOTP] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const emailRef = useRef('');
+  const turnstileRef = useRef<TurnstileRef>(null);
+
+  React.useEffect(() => {
+    const unsub = rateLimitManager.subscribe((st) => {
+      setRateLimitSeconds(st.isRateLimited ? st.retryAfter : 0);
+    });
+    return unsub;
+  }, []);
 
   const handleSubmit = async(e) => {
     try {
       e.preventDefault();
+      if (isSubmitting) return;
+
       const formData = new FormData(e.target);
       const values = Object.fromEntries(formData.entries());
 
-      if(!PASSWORD_REGEX.test(values.password)){
+      if(!PASSWORD_REGEX.test(values.password.toString())){
         setAlert('regex');
         return
       }
@@ -29,14 +43,36 @@ const Signup = () => {
         setAlert('confirmPassword');
         return;
       }
+
+      setIsSubmitting(true);
+
+      // Actively generate/retrieve Cloudflare Turnstile token on submit
+      let token = turnstileToken;
+      if (turnstileRef.current) {
+        token = await turnstileRef.current.getToken();
+        if (token) {
+          setTurnstileToken(token);
+        }
+      }
+
+      if (token) {
+        values.turnstileToken = token;
+      }
       
       const response = await register(values);
       if(response.success){
         setEnterOTP(true);
         emailRef.current = values.email.toString();
+      } else {
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
       }
     } catch (error) {
       console.log(error);
+      turnstileRef.current?.reset();
+      setTurnstileToken("");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -56,7 +92,6 @@ const Signup = () => {
       <ModalInfo isOpen={alert} content={getAlertContent(alert)} onClose={()=> {setAlert(null)}} onOk={()=> {setAlert(null)}}  />
       <VerifyOTP isOpen={enterOTP} sentTo={emailRef.current} 
       onClose={onOTPVerificationClose} type={VERIFY_OTP_TYPES.REGISTER} resendOtp={resendOtp} />
-      <Breadcrumb title={"Signup"} pages={["Signup"]} />
       <section className="page-section">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="form-card max-w-[570px] w-full mx-auto">
@@ -148,11 +183,18 @@ const Signup = () => {
                   />
                 </div>
 
+                <TurnstileWidget ref={turnstileRef} onVerify={(token) => setTurnstileToken(token)} />
+
                 <button
                   type="submit"
-                  className="btn-primary mt-7.5 w-full"
+                  disabled={rateLimitSeconds > 0 || isSubmitting}
+                  className={`btn-primary mt-7.5 w-full ${(rateLimitSeconds > 0 || isSubmitting) ? "opacity-60 cursor-not-allowed !bg-amber-600" : ""}`}
                 >
-                  Create Account
+                  {rateLimitSeconds > 0
+                    ? `Please wait ${rateLimitSeconds}s...`
+                    : isSubmitting
+                    ? "Creating Account..."
+                    : "Create Account"}
                 </button>
 
                 <div className="p-3 mt-5">

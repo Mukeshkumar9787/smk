@@ -54,7 +54,7 @@ const SingleItem = ({ item }) => {
       </div>
 
       <div className="min-w-[275px]">
-        <div className="w-max flex items-center rounded-md border border-gray-3">
+        <div data-add-to-cart-section="true" className="add-to-cart-section relative w-max flex items-center rounded-md border border-gray-3">
           <button
             onClick={() => handleDecreaseQuantity()}
             aria-label="button for remove product"

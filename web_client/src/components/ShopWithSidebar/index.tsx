@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import Breadcrumb from "../Common/Breadcrumb";
 import CategoryDropdown from "./CategoryDropdown";
 import SizeDropdown from "./SizeDropdown";
 import ColorsDropdwon from "./ColorsDropdown";
@@ -88,10 +87,6 @@ const ShopWithSidebar = () => {
 
   return (
     <>
-      <Breadcrumb
-        title={"Explore All Products"}
-        pages={["shop"]}
-      />
       <section className="overflow-hidden relative bg-transparent pb-20 pt-5">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="relative mb-5 xl:hidden">
@@ -234,7 +229,7 @@ const ShopWithSidebar = () => {
               <>
               {/* <!-- Products Grid Tab Content Start --> */}
               <div
-                className={`${"grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-1 gap-y-9"}`}
+                className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 items-stretch"
               >
                 {productItems.map((item, key) => <ProductItem item={item} key={key} />)}
               </div>

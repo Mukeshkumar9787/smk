@@ -1,6 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
-import Breadcrumb from "../Common/Breadcrumb";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import LoaderOverlay from "@/components/Common/LoaderOverlay";
 import PaymentMethod from "./PaymentMethod";
 import { getLoggedInUserData, getProductCountFromCart, getShippingAmount, redirectToSignIn } from "@/utils/helper";
@@ -16,6 +15,7 @@ import { handlePayment } from "@/utils/payment";
 import { ORDER_URL } from "@/utils/appUrls";
 import Policy from "./Policy";
 import { notifyError } from "@/utils/notify";
+import { rateLimitManager } from "@/http/rateLimitManager";
 
 const initialCheckoutValues = {
   name: "",
@@ -42,6 +42,14 @@ const Checkout = () => {
   const [isDiffBillAdd, setIsDiffBillAddress] = React.useState(false);
   const [productItems, setProductItems] = useState([]);
   const [checkoutValues, setCheckoutValues] = useState(initialCheckoutValues);
+  const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
+
+  useEffect(() => {
+    const unsub = rateLimitManager.subscribe((st) => {
+      setRateLimitSeconds(st.isRateLimited ? st.retryAfter : 0);
+    });
+    return unsub;
+  }, []);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [shippingInfo, setShippingInfo] = useState({country: '', state: ''});
   const [shipData, setShipData] = React.useState({});
@@ -248,7 +256,6 @@ const Checkout = () => {
   return (
     <>
       {checkoutLoaderMessage && <LoaderOverlay message={checkoutLoaderMessage} />}
-      <Breadcrumb title={"Checkout"} pages={["checkout"]} />
       <section className="page-section">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <form onSubmit={handleSubmit}>
@@ -294,13 +301,14 @@ const Checkout = () => {
                 {/* <!-- payment box --> */}
                 {/* <PaymentMethod /> */}
                 <Policy />
+
                 {/* <!-- checkout button --> */}
                 <button
-                  disabled={productItems.length === 0}
+                  disabled={productItems.length === 0 || rateLimitSeconds > 0}
                   type="submit"
-                  className={`w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 mt-7.5 ${(productItems.length === 0) && "bg-gray-4 text-gray"}`} 
+                  className={`w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 mt-7.5 ${(productItems.length === 0 || rateLimitSeconds > 0) && "bg-gray-4 text-gray cursor-not-allowed"}`} 
                 >
-                  Pay Now
+                  {rateLimitSeconds > 0 ? `Please wait ${rateLimitSeconds}s...` : "Pay Now"}
                 </button>
                 <div className="flex justify-end mt-2">
                   <img referrerPolicy="origin" src = "https://badges.razorpay.com/badge-light.png " width={130}  ></img>

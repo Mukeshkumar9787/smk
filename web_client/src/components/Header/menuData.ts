@@ -13,14 +13,17 @@ export const menuData: Menu[] = [
     path: "/shop",
   },
   {
-    title: "My Account",
-    newTab: false,
-    path: "/my-account",
-  },
-  {
     title: "Contact",
     newTab: false,
     path: "/contact",
+  },
+];
+
+export const userMenuData: Menu[] = [
+  {
+    title: "Orders",
+    newTab: false,
+    path: "/orders",
   },
 ];
 

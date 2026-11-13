@@ -3,6 +3,7 @@ import axios from 'axios';
 import { message } from 'antd';
 import { decrementGetRequest, incrementGetRequest } from './apiLoader';
 import { serverStatusManager } from './serverStatusManager';
+import { rateLimitManager } from './rateLimitManager';
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -13,6 +14,8 @@ const axiosInstance = axios.create({
     'ngrok-skip-browser-warning': 1,
   },
 });
+
+let globalRequestId = 0;
 
 axiosInstance.interceptors.request.use((config) => {
   try {
@@ -27,13 +30,29 @@ axiosInstance.interceptors.request.use((config) => {
       config._isTrackedGet = true;
     }
     config._retryCount = config._retryCount || 0;
+    config._reqId = ++globalRequestId;
   } catch (error) { }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app-api-request-start', {
+      detail: { reqId: config._reqId, method: config.method, url: config.url }
+    }));
+  }
   return config;
 }, (error) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app-api-request-end', {
+      detail: { reqId: error?.config?._reqId }
+    }));
+  }
   Promise.reject(error);
 });
 
 axiosInstance.interceptors.response.use((response) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app-api-request-end', {
+      detail: { reqId: response?.config?._reqId }
+    }));
+  }
   const trackedGet = response?.config?._isTrackedGet;
   if (trackedGet) {
     decrementGetRequest();
@@ -46,6 +65,11 @@ axiosInstance.interceptors.response.use((response) => {
   }
   return response;
 }, async (error) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app-api-request-end', {
+      detail: { reqId: error?.config?._reqId }
+    }));
+  }
   const config = error?.config || {};
   const trackedGet = config?._isTrackedGet;
   const isGet = config?.method?.toLowerCase() === "get";
@@ -98,6 +122,42 @@ axiosInstance.interceptors.response.use((response) => {
           isWakingUp: serverStatusManager.isWakingUp(),
           message: serverMessage,
         }
+      };
+    }
+
+    if (error.response && error.response.status === 429) {
+      const headers = error.response.headers || {};
+      const retryAfterHeader = headers['retry-after'] || headers['Retry-After'];
+      const rateLimitResetHeader = headers['ratelimit-reset'] || headers['x-ratelimit-reset'];
+      const rawSeconds = retryAfterHeader || rateLimitResetHeader || error.response?.data?.retryAfterSeconds || error.response?.data?.retryAfter;
+      const retryAfter = rawSeconds ? parseInt(String(rawSeconds), 10) || 60 : 60;
+
+      const rateLimitMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        `Please wait ${retryAfter} seconds before trying again.`;
+
+      rateLimitManager.trigger({
+        retryAfter,
+        message: rateLimitMsg,
+        endpoint: config?.url,
+      });
+
+      if (!config.skipErrorToast) {
+        message.warning({
+          content: `⏳ ${rateLimitMsg}`,
+          key: 'rate-limit-warning',
+          duration: 6,
+        });
+      }
+
+      return {
+        data: {
+          success: false,
+          isRateLimited: true,
+          retryAfter,
+          message: rateLimitMsg,
+        },
       };
     }
 

@@ -79,7 +79,7 @@ const CartSync = () => {
         quantity: item.quantity,
       }));
       await replaceCart(items);
-    }, 250);
+    }, 60);
 
     return () => clearTimeout(timeout);
   }, [cartItems]);

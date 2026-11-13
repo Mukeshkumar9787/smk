@@ -52,7 +52,7 @@ const NewArrival = async () => {
           </div>
 
           {shopData.length > 0 ? (
-            <div className="grid grid-cols-2 gap-x-1 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 items-stretch">
               {/* <!-- New Arrivals item --> */}
               {shopData.map((item) => (
                 <ProductItem item={item} key={item.id} />

@@ -100,10 +100,19 @@
     box-shadow: 0px 18px 46px rgba(15, 23, 42, 0.08);
   }
 
-  .surface-card img {
+  .surface-card img:not(.product-card-img) {
     max-width: 100%;
     height: auto;
     display: block;
+  }
+
+  .surface-card .product-card-img {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
   }
 
   .form-card {
@@ -470,3 +479,123 @@ input[type='search']::-webkit-search-results-decoration {
 .admin-data-table .ant-pagination .ant-pagination-item-active a {
   color: #fff !important;
 }
+
+/* ==========================================================================
+   Button Loader Around Button (Perimeter Travelling Ring & Glowing Halo)
+   ========================================================================== */
+
+.btn-loading-around {
+  position: relative !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+/* Glowing pulse halo around the button perimeter */
+.btn-loading-around::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid #0284c7;
+  box-shadow: 0 0 14px rgba(2, 132, 199, 0.6), inset 0 0 8px rgba(56, 189, 248, 0.25);
+  animation: btnHaloPulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.btn-perimeter-loader-wrapper {
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 30;
+  transition: opacity 0.2s ease;
+}
+
+.btn-perimeter-loader-wrapper.fade-out {
+  opacity: 0;
+}
+
+.btn-loader-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  border-radius: inherit;
+}
+
+.btn-loader-ring-rect {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 45 90;
+  animation: btnDashTravel 1s linear infinite;
+}
+
+@keyframes btnDashTravel {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -270;
+  }
+}
+
+@keyframes btnHaloPulse {
+  0%, 100% {
+    opacity: 0.75;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.4), inset 0 0 4px rgba(56, 189, 248, 0.2);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px rgba(2, 132, 199, 0.75), inset 0 0 10px rgba(56, 189, 248, 0.4);
+  }
+}
+
+.btn-loader-spinner-badge {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #0284c7;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 35;
+  animation: btnBadgePop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-loader-spinner-inner {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #ffffff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: btnSpinnerRotate 0.6s linear infinite;
+}
+
+@keyframes btnSpinnerRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes btnBadgePop {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+

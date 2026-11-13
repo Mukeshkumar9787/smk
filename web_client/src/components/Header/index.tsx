@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { adminMenuData, menuData } from "./menuData";
+import { adminMenuData, menuData, userMenuData } from "./menuData";
 import Dropdown from "./Dropdown";
 import { useAppSelector } from "@/redux/store";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
@@ -64,20 +64,31 @@ const Header = () => {
     fetchConfig();
   }, [fetchConfig]);
 
-  // Sticky menu
-  useEffect(()=>{
-    if(!getStoredToken()) return;
-    const fetchUser = async() => {
-      const userData = await getLoggedInUserData();
-      if(userData){
-        setUser(userData);
-        if(userData.role === ROLE_TYPES.ADMIN){
-          setMenuItems([...menuData, ...adminMenuData]);
-        }
-      }
+  // User & dynamic navigation menu
+  useEffect(() => {
+    if (!getStoredToken()) {
+      setUser(null);
+      setMenuItems(menuData);
+      return;
     }
+    const fetchUser = async () => {
+      const userData = await getLoggedInUserData();
+      if (userData) {
+        setUser(userData);
+        const authedMenu = [
+          ...menuData.filter((item) => item.path !== "/contact"),
+          ...userMenuData,
+          ...(userData.role === ROLE_TYPES.ADMIN ? adminMenuData : []),
+          ...menuData.filter((item) => item.path === "/contact"),
+        ];
+        setMenuItems(authedMenu);
+      } else {
+        setUser(null);
+        setMenuItems(menuData);
+      }
+    };
     fetchUser();
-  },[])
+  }, [pathname]);
 
   useEffect(() => {
     if (!navigationOpen) return;
@@ -360,78 +371,77 @@ const Header = () => {
                     )}
                   </span>
                 </button>
-                {user ?
-                  <Link href="/my-account" className="flex items-center gap-2">
-                  {user.profilePicture ? (
-                    <img
-                      src={user.profilePicture}
-                      alt={user.name || "user"}
-                      width={36}
-                      height={36}
-                      className="h-9 w-9 rounded-full object-cover"
-                    />
-                  ) : (
+                {user ? (
+                  <Link
+                    href="/my-account"
+                    title="Go to My Account"
+                    className="group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 p-1 sm:pr-3 shadow-2xs hover:border-sky-400 hover:bg-slate-50 hover:shadow-sm transition-all duration-200 cursor-pointer"
+                  >
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user.name || "user"}
+                        width={34}
+                        height={34}
+                        className="h-8 w-8 rounded-full object-cover ring-2 ring-sky-500/25 group-hover:ring-sky-500 transition-all shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold text-xs shadow-2xs ring-2 ring-sky-500/25 group-hover:ring-sky-500 transition-all">
+                        {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                    )}
+
+                    <span className="hidden sm:block font-semibold text-xs text-slate-800 group-hover:text-sky-600 transition truncate max-w-[130px]">
+                      {user.name}
+                    </span>
+
                     <svg
-                      width="24"
-                      height="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
                       viewBox="0 0 24 24"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-slate-400 group-hover:text-sky-600 group-hover:translate-x-0.5 transition hidden sm:block shrink-0"
                     >
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M12 1.25C9.37666 1.25 7.25001 3.37665 7.25001 6C7.25001 8.62335 9.37666 10.75 12 10.75C14.6234 10.75 16.75 8.62335 16.75 6C16.75 3.37665 14.6234 1.25 12 1.25ZM8.75001 6C8.75001 4.20507 10.2051 2.75 12 2.75C13.7949 2.75 15.25 4.20507 15.25 6C15.25 7.79493 13.7949 9.25 12 9.25C10.2051 9.25 8.75001 7.79493 8.75001 6Z"
-                        fill="#3C50E0"
-                      />
-                      <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M12 12.25C9.68646 12.25 7.55494 12.7759 5.97546 13.6643C4.4195 14.5396 3.25001 15.8661 3.25001 17.5L3.24995 17.602C3.24882 18.7638 3.2474 20.222 4.52642 21.2635C5.15589 21.7761 6.03649 22.1406 7.22622 22.3815C8.41927 22.6229 9.97424 22.75 12 22.75C14.0258 22.75 15.5808 22.6229 16.7738 22.3815C17.9635 22.1406 18.8441 21.7761 19.4736 21.2635C20.7526 20.222 20.7512 18.7638 20.7501 17.602L20.75 17.5C20.75 15.8661 19.5805 14.5396 18.0246 13.6643C16.4451 12.7759 14.3136 12.25 12 12.25ZM4.75001 17.5C4.75001 16.6487 5.37139 15.7251 6.71085 14.9717C8.02681 14.2315 9.89529 13.75 12 13.75C14.1047 13.75 15.9732 14.2315 17.2892 14.9717C18.6286 15.7251 19.25 16.6487 19.25 17.5C19.25 18.8078 19.2097 19.544 18.5264 20.1004C18.1559 20.4022 17.5365 20.6967 16.4762 20.9113C15.4193 21.1252 13.9742 21.25 12 21.25C10.0258 21.25 8.58075 21.1252 7.5238 20.9113C6.46354 20.6967 5.84413 20.4022 5.4736 20.1004C4.79033 19.544 4.75001 18.8078 4.75001 17.5Z"
-                        fill="#3C50E0"
-                      />
+                      <path d="m9 18 6-6-6-6" />
                     </svg>
-                  )}
-
-                  <div className="max-w-[96px]">
-                    <p className="font-medium text-custom-sm text-dark">
-                      {user.name}
-                    </p>
-                  </div>
-                </Link>
-                  : 
-                <Link href="/signin" className="flex items-center gap-2">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                  </Link>
+                ) : (
+                  <Link
+                    href="/signin"
+                    title="Sign In to your account"
+                    className="group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 px-3 py-1.5 shadow-2xs hover:border-sky-400 hover:bg-slate-50 hover:shadow-sm transition-all duration-200 cursor-pointer"
                   >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M12 1.25C9.37666 1.25 7.25001 3.37665 7.25001 6C7.25001 8.62335 9.37666 10.75 12 10.75C14.6234 10.75 16.75 8.62335 16.75 6C16.75 3.37665 14.6234 1.25 12 1.25ZM8.75001 6C8.75001 4.20507 10.2051 2.75 12 2.75C13.7949 2.75 15.25 4.20507 15.25 6C15.25 7.79493 13.7949 9.25 12 9.25C10.2051 9.25 8.75001 7.79493 8.75001 6Z"
-                      fill="#3C50E0"
-                    />
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M12 12.25C9.68646 12.25 7.55494 12.7759 5.97546 13.6643C4.4195 14.5396 3.25001 15.8661 3.25001 17.5L3.24995 17.602C3.24882 18.7638 3.2474 20.222 4.52642 21.2635C5.15589 21.7761 6.03649 22.1406 7.22622 22.3815C8.41927 22.6229 9.97424 22.75 12 22.75C14.0258 22.75 15.5808 22.6229 16.7738 22.3815C17.9635 22.1406 18.8441 21.7761 19.4736 21.2635C20.7526 20.222 20.7512 18.7638 20.7501 17.602L20.75 17.5C20.75 15.8661 19.5805 14.5396 18.0246 13.6643C16.4451 12.7759 14.3136 12.25 12 12.25ZM4.75001 17.5C4.75001 16.6487 5.37139 15.7251 6.71085 14.9717C8.02681 14.2315 9.89529 13.75 12 13.75C14.1047 13.75 15.9732 14.2315 17.2892 14.9717C18.6286 15.7251 19.25 16.6487 19.25 17.5C19.25 18.8078 19.2097 19.544 18.5264 20.1004C18.1559 20.4022 17.5365 20.6967 16.4762 20.9113C15.4193 21.1252 13.9742 21.25 12 21.25C10.0258 21.25 8.58075 21.1252 7.5238 20.9113C6.46354 20.6967 5.84413 20.4022 5.4736 20.1004C4.79033 19.544 4.75001 18.8078 4.75001 17.5Z"
-                      fill="#3C50E0"
-                    />
-                  </svg>
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 group-hover:bg-sky-50 group-hover:text-sky-600 transition">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
 
-                  <div className="max-w-[96px]">
-                    <span className="block text-2xs text-dark-4 uppercase">
-                      account
-                    </span>
-                    <p className="font-medium text-custom-sm text-dark">
-                      Sign In
-                    </p>
-                  </div>
-                </Link>
-                }
+                    <div className="text-left leading-tight">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Account
+                      </span>
+                      <p className="font-semibold text-xs text-slate-800 group-hover:text-sky-600 transition">
+                        Sign In
+                      </p>
+                    </div>
+                  </Link>
+                )}
               </div>
 
               {/* <!-- Hamburger Toggle BTN --> */}

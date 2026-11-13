@@ -1,44 +1,129 @@
-import React, { useRef, useEffect } from "react";
-import OrderDetails from "./OrderDetails";
-// import EditOrder from "./EditOrder";
+"use client";
 
-const OrderModal = ({ showDetails, showEdit, toggleModal, order }: any) => {
-  if (!showDetails && !showEdit) {
+import React, { useEffect } from "react";
+import OrderDetails from "./OrderDetails";
+import Link from "next/link";
+import { ORDER_URL } from "@/utils/appUrls";
+
+interface OrderModalProps {
+  isOpen?: boolean;
+  orderNo?: string | null;
+  onClose?: () => void;
+  // Legacy props fallback
+  showDetails?: boolean;
+  showEdit?: boolean;
+  toggleModal?: (val: boolean) => void;
+  order?: any;
+}
+
+const OrderModal: React.FC<OrderModalProps> = ({
+  isOpen,
+  orderNo,
+  onClose,
+  showDetails,
+  toggleModal,
+  order,
+}) => {
+  const visible = isOpen ?? Boolean(showDetails);
+  const activeOrderNo = orderNo || order?.orderNo;
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else if (toggleModal) {
+      toggleModal(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [visible]);
+
+  if (!visible || !activeOrderNo) {
     return null;
   }
 
   return (
-    <>
-      <div
-        className={`backdrop-filter-sm visible fixed left-0 top-0 z-[99999] flex min-h-screen w-full justify-center items-center bg-[#000]/40 px-4 py-8 sm:px-8`}
-      >
-        <div className="shadow-7 relative w-full max-w-[600px] h-[242px] scale-100 transform rounded-[15px] bg-white transition-all flex flex-col justify-center items-center">
-          <button
-            onClick={() => toggleModal(false)}
-            className="text-body absolute -right-6 -top-6 z-[9999] flex h-11.5 w-11.5 items-center justify-center rounded-full border-2 border-stroke bg-white hover:text-dark"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 25 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div className="relative flex flex-col w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Sticky Modal Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 text-lg shadow-2xs">
+              📦
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 sm:text-base">
+                  Order Details
+                </h3>
+                <span className="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100">
+                  #{activeOrderNo}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Inspect items, live tracking, invoice and delivery progress
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={`${ORDER_URL}/${activeOrderNo}`}
+              onClick={handleClose}
+              title="Open specific order page"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-sky-700 transition"
             >
-              <path
-                d="M12.9983 10.586L17.9483 5.63603L19.3623 7.05003L14.4123 12L19.3623 16.95L17.9483 18.364L12.9983 13.414L8.04828 18.364L6.63428 16.95L11.5843 12L6.63428 7.05003L8.04828 5.63603L12.9983 10.586Z"
-                fill="currentColor"
-              ></path>
-            </svg>
-          </button>
+              <span>Go to Order Page</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </Link>
 
-          <>
-            {showDetails && <OrderDetails orderItem={order} />}
+            <button
+              onClick={handleClose}
+              aria-label="Close modal"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
 
-            {/* {showEdit && <EditOrder order={order} toggleModal={toggleModal} />} */}
-          </>
+        {/* Modal Scrollable Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-7">
+          <OrderDetails orderNo={activeOrderNo} isModal={true} onClose={handleClose} />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -29,8 +29,8 @@ All transactions on SMK are processed through PCI-DSS Level 1 compliant gateways
 
 ## 3. Modifying or Canceling an Order
 
-- **Self-Service Cancellation:** Orders can be canceled directly from your account page at [https://smk-tan.vercel.app/my-account](https://smk-tan.vercel.app/my-account) within **2 hours** of placement, provided the status is still **"Processing"** or **"Confirmed"**.
-- **After Dispatch:** Once an order moves to **"Shipped"** with an assigned courier AWB, cancellation is no longer possible. You may refuse delivery at the doorstep or initiate a 30-day return upon receipt.
+- **Self-Service Cancellation:** Orders can be viewed, tracked, and canceled directly from the dedicated **Orders Screen** at [https://smk-tan.vercel.app/orders](https://smk-tan.vercel.app/orders) (or via account page at [https://smk-tan.vercel.app/my-account](https://smk-tan.vercel.app/my-account)) within **2 hours** of placement, provided the status is still **"Processing"** or **"Confirmed"**.
+- **After Dispatch:** Once an order moves to **"Shipped"** with an assigned courier AWB, cancellation is no longer possible. You may track package movement live on the Order Details screen or refuse delivery at the doorstep to initiate an automated refund.
 - **Address Changes:** Contact live support immediately within 1 hour of placing the order to update delivery address or phone number prior to warehouse packing.
 
 ---
@@ -41,7 +41,7 @@ All transactions on SMK are processed through PCI-DSS Level 1 compliant gateways
   - HSN codes for each product category.
   - CGST + SGST (for intra-state shipments) or IGST (for inter-state shipments).
   - SMK legal entity tax registration number (GSTIN).
-- **Download Invoice:** Download PDF copies anytime from your account dashboard under **Order Details > Download Tax Invoice**.
+- **Download Invoice:** Open any order on the dedicated **Orders Screen** at [https://smk-tan.vercel.app/orders](https://smk-tan.vercel.app/orders), click **"View Details"**, and select **"Print Bill"** to print or save a clean PDF tax invoice.
 - **Business GST Purchases:** Customers can input their company name and GSTIN at checkout to claim input tax credits (ITC).
 
 ---

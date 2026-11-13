@@ -95,8 +95,9 @@ const AddToCart = ({ id, align='center', stack = true, purchase = true, stock=0,
             <div className={baseWrapClass}>
                 <button
                     type="button"
+                    data-add-to-cart-section="true"
                     onClick={() => handleAddToCart()}
-                    className={`${actionBtnClass} bg-blue text-white hover:bg-blue-dark text-xs md:text-sm`}
+                    className={`${actionBtnClass} add-to-cart-section bg-blue text-white hover:bg-blue-dark text-xs md:text-sm`}
                 >
                     Add&nbsp;to&nbsp;cart
                 </button>
@@ -108,7 +109,10 @@ const AddToCart = ({ id, align='center', stack = true, purchase = true, stock=0,
     }
   return (
     <div className={baseWrapClass}>
-        <div className="flex h-10 w-1/2 max-w-[220px] items-center rounded-lg border border-gray-3 bg-white text-custom-sm">
+        <div 
+            data-add-to-cart-section="true"
+            className="add-to-cart-section relative flex h-10 w-1/2 max-w-[220px] items-center rounded-lg border border-gray-3 bg-white text-custom-sm"
+        >
             <button
                 type="button"
                 aria-label="button for remove product"
@@ -118,7 +122,7 @@ const AddToCart = ({ id, align='center', stack = true, purchase = true, stock=0,
                 <MinusOutlined/>
             </button>
 
-            <span className="flex items-center justify-center w-1/3  border-x border-gray-4">
+            <span className="flex items-center justify-center w-1/3 border-x border-gray-4">
                 {quantity}
             </span>
 

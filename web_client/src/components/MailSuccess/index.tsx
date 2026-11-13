@@ -1,11 +1,9 @@
 import React from "react";
-import Breadcrumb from "../Common/Breadcrumb";
 import Link from "next/link";
 
 const MailSuccess = () => {
   return (
     <>
-      <Breadcrumb title={"MailSuccess"} pages={["MailSuccess"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="bg-white rounded-xl shadow-1 px-4 py-10 sm:py-15 lg:py-20 xl:py-25">

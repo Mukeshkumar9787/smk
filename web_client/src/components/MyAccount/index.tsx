@@ -1,8 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useState } from "react";
-import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
-import Orders from "../Orders";
 import { getLoggedInUserData, getMemberSince, getStoredToken, logout } from "@/utils/helper";
 import { updateProfile } from "@/http/apiCalls";
 import { Button, Popconfirm } from "antd";
@@ -12,8 +10,8 @@ import { notifySuccess, notifyError } from "@/utils/notify";
 import FileUploader from "../Common/FileUploader";
 
 const MyAccount = () => {
-  const [activeTab, setActiveTab] = useState("orders");
-  const [user, setUser] = useState({});
+  const [activeTab, setActiveTab] = useState("account-details");
+  const [user, setUser] = useState<any>({});
   const [profileImage, setProfileImage] = useState(null);
   const fileIdsRef = React.useRef(new Set());
   const deletedFileIdsRef = React.useRef(new Set());
@@ -30,9 +28,8 @@ const MyAccount = () => {
     );
   }, []);
   const tabs = [
-    { key: "orders", label: "Orders" },
-    { key: "addresses", label: "Addresses" },
     { key: "account-details", label: "Profile" },
+    { key: "addresses", label: "Addresses" },
     { key: "reset-password", label: "Reset Password" },
   ];
 
@@ -102,8 +99,6 @@ const MyAccount = () => {
 
   return (
     <>
-      <Breadcrumb title={"My Account"} pages={["my account"]} />
-
       <section className="page-section">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="flex flex-col gap-7.5">
@@ -136,7 +131,7 @@ const MyAccount = () => {
                                   <img
                                     src={profileSrc}
                                     alt={user?.name || "user"}
-                                    className="h-full w-full object-cover"
+                                    className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                                   />
                                 ) : (
                                   <div className="relative flex h-full w-full items-center justify-center rounded-full bg-slate-100 p-5">
@@ -149,7 +144,11 @@ const MyAccount = () => {
                                     />
                                   </div>
                                 )}
-                                <div className="pointer-events-none absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 p-1 shadow">
+                                {/* Subtle hover overlay backdrop */}
+                                <div className="pointer-events-none absolute inset-0 rounded-full bg-slate-950/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+
+                                {/* Edit button revealed only on hover */}
+                                <div className="pointer-events-none absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 p-1 shadow-md backdrop-blur-xs opacity-0 scale-90 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100">
                                   <svg
                                     aria-hidden="true"
                                     viewBox="0 0 20 20"
@@ -300,20 +299,7 @@ const MyAccount = () => {
 
             
           <!--== user dashboard content start ==--> */}
-            {/* <!-- dashboard tab content start --> */}
-
-            {/* <!-- dashboard tab content end -->
-
-          <!-- orders tab content start --> */}
-            <div
-              className={`w-full rounded-xl shadow-1 ${
-                activeTab === "orders" ? "block" : "hidden"
-              }`}
-            >
-              <Orders />
-            </div>
-            {/* <!-- orders tab content end -->
-          <!-- details tab content start --> */}
+            {/* <!-- addresses tab content start --> */}
             <div
               className={`w-full ${
                 activeTab === "addresses" ? "block" : "hidden"

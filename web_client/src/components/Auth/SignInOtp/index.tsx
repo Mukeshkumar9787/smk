@@ -1,17 +1,25 @@
 "use client"
 import React, { useRef, useState } from "react";
-import Breadcrumb from "@/components/Common/Breadcrumb";
 import { loginWithOTP } from "@/http/apiCalls";
 import { getAlertContent, VERIFY_OTP_TYPES } from "@/utils/constants";
 import Link from "next/link";
 import VerifyOTP from "../VerifyOTP";
 import ModalInfo from "@/components/Common/ModalInfo";
 import GoogleLoginButton from "../GoogleLoginButton";
+import { rateLimitManager } from "@/http/rateLimitManager";
 
 const SigninOtp = () => {
   const [alert, setAlert] = useState(null);
   const [enterOTP, setEnterOTP] = useState(false);
+  const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
   const emailRef = useRef('');
+
+  React.useEffect(() => {
+    const unsub = rateLimitManager.subscribe((st) => {
+      setRateLimitSeconds(st.isRateLimited ? st.retryAfter : 0);
+    });
+    return unsub;
+  }, []);
 
   const handleSubmit = async(e) => {
     try {
@@ -44,7 +52,6 @@ const SigninOtp = () => {
       <ModalInfo isOpen={alert} content={getAlertContent(alert)} onClose={()=> {setAlert(null)}} onOk={()=> {setAlert(null)}}  />
       <VerifyOTP isOpen={enterOTP} sentTo={emailRef.current} 
       onClose={onOTPVerificationClose} type={VERIFY_OTP_TYPES.LOGIN} resendOtp={resendOtp} />
-      <Breadcrumb title={"Signin with OTP"} pages={["Signin with OTP"]} />
       <section className="page-section">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="form-card max-w-[570px] w-full mx-auto">
@@ -73,9 +80,10 @@ const SigninOtp = () => {
 
                 <button
                   type="submit"
-                  className="btn-primary mt-7.5 w-full"
+                  disabled={rateLimitSeconds > 0}
+                  className={`btn-primary mt-7.5 w-full ${rateLimitSeconds > 0 ? "opacity-60 cursor-not-allowed !bg-amber-600" : ""}`}
                 >
-                  Send OTP
+                  {rateLimitSeconds > 0 ? `Please wait ${rateLimitSeconds}s...` : "Send OTP"}
                 </button>
 
                 <div className="p-3 mt-5">

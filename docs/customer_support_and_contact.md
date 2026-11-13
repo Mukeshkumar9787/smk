@@ -22,8 +22,9 @@ We offer multiple responsive channels to assist customers at every stage of thei
 
 ## 2. Escalation Hierarchy
 
-1. **Tier 1 (Instant AI Assistant):**
+1. **Tier 1 (Instant AI Assistant & Self-Service Portal):**
    - Answers policy questions, order status lookups, returns, shipping estimates, and product details grounded in verified knowledge base vectors.
+   - Customers can view all active and historical orders directly at [https://smk-tan.vercel.app/orders](https://smk-tan.vercel.app/orders) and raise order disputes on the Order Details screen.
 2. **Tier 2 (Support Operator):**
    - Handles manual address corrections, carrier delivery coordination, return approvals, and payment reconciliation.
 3. **Tier 3 (Grievance Officer & Support Admin):**

@@ -21,7 +21,13 @@ const getOrdersByUserId = async (req, res) => {
     const page = parseInt(req.query.pageNumber || 1);
     const pageSize = parseInt(req.query.pageSize || 5);
     const skip = (page - 1) * pageSize;
-    const { data, totalCount} = await orderService.getOrders({ userId: req.user.id, skip, take: pageSize});
+    const { data, totalCount} = await orderService.getOrders({
+      userId: req.user.id,
+      skip,
+      take: pageSize,
+      search: req.query.search,
+      status: req.query.status,
+    });
     return res.status(200).json({
       success: true,
       data,
