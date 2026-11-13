@@ -1,6 +1,8 @@
 "use client";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  dateFormatter,
   getCurrencyDetails,
   getLoggedInUserData,
   getShippingDisplay,
@@ -22,7 +24,7 @@ import {
   ROLE_TYPES,
 } from "@/utils/constants";
 import Link from "next/link";
-import { SHOP_DETAILS } from "@/utils/appUrls";
+import { ORDER_URL, SHOP_DETAILS } from "@/utils/appUrls";
 import { Input, Select } from "antd";
 import ModalInfo from "../Common/ModalInfo";
 import OrderStatusTimeline from "./OrderStatusHistory";
@@ -32,7 +34,30 @@ import { useReactToPrint } from "react-to-print";
 import CourierDetails from "./CourierDetails";
 import { notifyError, notifySuccess } from "@/utils/notify";
 
-const formatStatusLabel = (value) => value?.replaceAll("_", " ");
+const formatStatusLabel = (value: string) => value?.replaceAll("_", " ");
+
+const FLIPKART_STAGES = [
+  { key: "PLACED", label: "Order Confirmed", subtext: "Your order has been placed" },
+  { key: "SHIPPED", label: "Shipped", subtext: "Item handed over to courier partner" },
+  { key: "OUT_FOR_DELIVERY", label: "Out For Delivery", subtext: "Item is out for delivery in your area" },
+  { key: "DELIVERED", label: "Delivered", subtext: "Package delivered to recipient" },
+];
+
+const getStageIndex = (status: string) => {
+  switch (status) {
+    case "PLACED":
+      return 0;
+    case "CONFIRMED":
+    case "PROCESSING":
+      return 0;
+    case "SHIPPED":
+      return 1;
+    case "DELIVERED":
+      return 3;
+    default:
+      return 0;
+  }
+};
 
 const OrderDetails = ({ params, orderNo, orderItem }: any) => {
   const targetParams = params || { slug: orderNo || orderItem?.orderNo || orderItem?.slug };
@@ -45,6 +70,7 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
   const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
   const [isEditingDispute, setIsEditingDispute] = useState(false);
+  const [copiedTracking, setCopiedTracking] = useState(false);
 
   const handlePrint = useReactToPrint({ contentRef: componentRef });
 
@@ -56,12 +82,10 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
 
       if (userData?.role === ROLE_TYPES.ADMIN) {
         response = await getOrderDetailsBySlugAdmin(targetParams);
-
         const modifiedData = {
           ...response?.data,
           isAdmin: true,
         };
-
         setStatusInfo({ status: modifiedData?.status });
         setData(modifiedData);
       } else {
@@ -69,15 +93,18 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
         setData(response?.data);
       }
     } catch (error) {
-      console.error("Failed to fetch order:", error);
+      console.error("Failed to fetch order details:", error);
     }
   }, [targetParams]);
 
   const handleUpdateStatus = async () => {
     try {
-      const response = await updateOrderStatusBySlugAdmin({ slug: targetParams.slug, ...statusInfo });
+      const response = await updateOrderStatusBySlugAdmin({
+        slug: targetParams.slug,
+        ...statusInfo,
+      });
       if (response.success) {
-        notifySuccess("Order status changed successfully.");
+        notifySuccess("Order status updated successfully.");
         fetchOrder();
       }
     } catch (error) {}
@@ -99,7 +126,7 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
         additionalInfo: data?.additionalInfo || {},
       });
       if (response.success) {
-        notifySuccess("Courier details changed successfully.");
+        notifySuccess("Courier details updated successfully.");
         fetchOrder();
       }
     } catch (error) {}
@@ -130,17 +157,17 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
       if (response.success) {
         notifySuccess(
           response.message ||
-            (isEditingDispute ? "Dispute updated successfully." : "Dispute raised successfully."),
+            (isEditingDispute ? "Dispute updated successfully." : "Dispute submitted successfully.")
         );
         setIsDisputeModalOpen(false);
         setDisputeMessage("");
         setIsEditingDispute(false);
         fetchOrder();
       }
-    } catch (error) {
+    } catch (error: any) {
       notifyError(
         error?.response?.data?.message ||
-          (isEditingDispute ? "Unable to update dispute." : "Unable to raise dispute."),
+          (isEditingDispute ? "Unable to update dispute." : "Unable to submit dispute.")
       );
     } finally {
       setIsSubmittingDispute(false);
@@ -159,18 +186,24 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
     setIsDisputeModalOpen(true);
   };
 
+  const copyTrackingNumber = () => {
+    if (data?.additionalInfo?.trackingId) {
+      navigator.clipboard?.writeText(data.additionalInfo.trackingId);
+      setCopiedTracking(true);
+      setTimeout(() => setCopiedTracking(false), 2000);
+    }
+  };
+
   useEffect(() => {
     fetchOrder();
   }, [fetchOrder]);
 
-  const fetchConfig = React.useCallback(async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const { success, data } = await getConfig({
         configs: [CONFIG_KEYS.COMP_INFO, CONFIG_KEYS.COURIER],
       });
-
       if (!success) return;
-
       setCompInfo(data?.[CONFIG_KEYS.COMP_INFO] ?? {});
       setCouriers(data?.[CONFIG_KEYS.COURIER] || []);
     } catch (error) {
@@ -178,306 +211,444 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
+
+  if (!data) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center bg-[#f1f3f6] py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#2874f0] border-t-transparent" />
+        <p className="mt-3 text-xs text-[#878787]">Loading order details...</p>
+      </div>
+    );
+  }
 
   const productItems = data?.products || [];
   const totalAmount = data?.totalAmount || 0;
   const currency = getCurrencyDetails().currencySymbol;
   const nextSteps = getNextOrderStatuses(data?.status);
   const orderStatusHistory = data?.orderStatusHistory || [];
-  const currentComments =
-    orderStatusHistory.find((item) => item.status === data?.status)?.meta?.comments || "";
   const dispute = data?.dispute;
+  const courier = data?.additionalInfo?.courier;
+  const trackingId = data?.additionalInfo?.trackingId;
+  const courierObj = couriers.find((c) => c.name === courier);
+  const courierLink = courierObj?.link || "#";
 
-  if (!data) return null;
+  const isDelivered = data?.status === "DELIVERED";
+  const isCancelled = data?.status === "CANCELLED" || data?.status === "REJECTED";
+  const currentStageIdx = getStageIndex(data?.status);
 
   return (
-    <>
+    <div className="min-h-screen bg-[#f1f3f6] pb-16 pt-4 font-sans text-[#212121]">
+      {/* Hidden Invoice print target */}
       <div ref={componentRef} className="hidden print:block print-only">
         <OrderInvoiceComponent data={{ ...data, compInfo }} />
       </div>
-      <section className="overflow-hidden bg-transparent py-12 pt-5">
-        <div className="mx-auto w-full max-w-[1240px] px-4 sm:px-8 xl:px-0">
-          <form>
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="space-y-6">
-                <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fbff_46%,#eef6ff_100%)] shadow-[0_20px_55px_rgba(15,23,42,0.08)]">
-                  <div className="flex flex-col gap-5 px-5 py-6 sm:px-7 sm:py-7 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700">
-                        Order Detail
-                      </p>
-                      <h1 className="mt-2 text-2xl font-semibold text-slate-950 sm:text-3xl">
-                        Order #{data?.orderNo}
-                      </h1>
-                      <p className="mt-2 text-sm text-slate-600">
-                        {productItems.length} items • {data?.paymentType} payment
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-start gap-3 lg:items-end">
-                      <span
-                        className="inline-flex rounded-full px-4 py-2 text-sm font-semibold"
-                        style={ORDER_STATUS_COLOR[data?.status]}
+
+      <div className="mx-auto w-full max-w-[1240px] px-3 sm:px-6">
+        {/* Flipkart Breadcrumbs */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[#878787]">
+          <div className="flex items-center gap-1.5">
+            <Link href="/" className="hover:text-[#2874f0]">
+              Home
+            </Link>
+            <span>›</span>
+            <Link href="/my-account" className="hover:text-[#2874f0]">
+              My Account
+            </Link>
+            <span>›</span>
+            <Link href={ORDER_URL} className="hover:text-[#2874f0]">
+              My Orders
+            </Link>
+            <span>›</span>
+            <span className="font-medium text-[#212121]">#{data?.orderNo}</span>
+          </div>
+
+          <Link
+            href={ORDER_URL}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#2874f0] hover:underline"
+          >
+            <span>‹ Back to My Orders</span>
+          </Link>
+        </div>
+
+        {/* 1. Flipkart Delivery Address & Actions Header Card */}
+        <div className="mb-3.5 rounded-sm border border-[#e0e0e0] bg-white p-4 shadow-2xs sm:p-5">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+            {/* Delivery Address */}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[#878787]">
+                Delivery Address
+              </h2>
+              <div className="mt-2 text-sm text-[#212121]">
+                <p className="font-bold text-base text-[#212121]">
+                  {data?.user?.name || data?.name || "Customer"}
+                </p>
+                <p className="mt-1 whitespace-pre-line text-sm text-[#212121] leading-relaxed">
+                  {data?.address || "Address details on file"}
+                </p>
+                {data?.user?.mobile && (
+                  <p className="mt-2 text-xs text-[#212121]">
+                    <span className="font-semibold">Phone number: </span>
+                    {data.user.mobile}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Order Actions */}
+            <div className="flex flex-wrap items-center gap-2.5 border-t border-[#f0f0f0] pt-3 md:border-t-0 md:pt-0">
+              {isPrintEnable(data?.status) && (
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-[#2874f0] bg-white px-4 py-2 text-xs font-semibold text-[#2874f0] transition hover:bg-blue-50 cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect width="12" height="8" x="6" y="14"></rect>
+                  </svg>
+                  <span>Download Invoice</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={dispute ? openEditDisputeModal : openCreateDisputeModal}
+                className="inline-flex items-center gap-1.5 rounded-sm border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 cursor-pointer"
+              >
+                <span>❓ Need Help?</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Main Order Item & Flipkart Stepper Card */}
+        <div className="mb-3.5 rounded-sm border border-[#e0e0e0] bg-white p-5 shadow-2xs sm:p-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* Products List (Left: 5 cols) */}
+            <div className="lg:col-span-5 border-b border-[#f0f0f0] pb-6 lg:border-b-0 lg:border-r lg:pr-6">
+              <div className="space-y-4">
+                {productItems.map((product: any) => (
+                  <div key={product.id || product.slug} className="flex items-start gap-4">
+                    <Link
+                      href={`${SHOP_DETAILS}/${product.slug}`}
+                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm border border-gray-100 bg-white p-1"
+                    >
+                      <img
+                        src={product.img || "/images/products/product-01.png"}
+                        alt={product.title}
+                        className="h-full w-full object-contain"
+                      />
+                    </Link>
+
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`${SHOP_DETAILS}/${product.slug}`}
+                        className="block font-medium text-sm text-[#212121] transition hover:text-[#2874f0] line-clamp-2"
                       >
-                        {formatStatusLabel(data?.status)}
-                        {currentComments && ` (${currentComments})`}
-                      </span>
-                      {isPrintEnable(data?.status) && (
-                        <button type="button" onClick={handlePrint} className="btn-primary px-5 text-sm">
-                          Print Bill
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                        {product.title}
+                      </Link>
 
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="surface-card p-5 sm:p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                      Shipping
-                    </p>
-                    <h2 className="mt-3 text-lg font-semibold text-dark">Shipping Address</h2>
-                    <p className="mt-3 whitespace-pre-line text-dark-4">{data?.address || "-"}</p>
-                  </div>
-
-                  <div className="surface-card p-5 sm:p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                      Billing
-                    </p>
-                    <h2 className="mt-3 text-lg font-semibold text-dark">Billing Address</h2>
-                    <p className="mt-3 whitespace-pre-line text-dark-4">
-                      {data?.billingAddress || "-"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="surface-card p-5 sm:p-6">
-                    <h2 className="mt-3 text-lg font-semibold text-dark">Order Summary</h2>
-                    <div className="mt-4 space-y-3 text-sm">
-                      <div className="space-y-3">
-                        {productItems.map((product) => (
-                          <div
-                            key={product.id}
-                            className="flex flex-col gap-4 text-sm sm:flex-row sm:items-start sm:justify-between"
-                          >
-                            <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-                              <Link href={`${SHOP_DETAILS}/${product.slug}`} className="flex-shrink-0">
-                                <img
-                                  src={product.img}
-                                  className="h-14 w-14 rounded-xl object-cover"
-                                  alt={product.title}
-                                />
-                              </Link>
-                              <div className="min-w-0">
-                                <Link
-                                  href={`${SHOP_DETAILS}/${product.slug}`}
-                                  className="block truncate font-medium text-dark transition hover:text-blue"
-                                >
-                                  {product.title}
-                                </Link>
-                                <p className="mt-1 text-xs text-dark-4">
-                                  {currency}
-                                  {Number(product.price).toFixed(2)} x {product.quantity}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="whitespace-nowrap font-medium text-dark sm:self-center">
-                              {currency}
-                              {Number(product.price * product.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-dark-4">Shipping</span>
-                        <span className="font-medium text-dark">
-                          {getShippingDisplay(data?.shippingAmount)}
+                      <div className="mt-1 flex items-center gap-2 text-xs text-[#878787]">
+                        <span>Seller: SMK Retail</span>
+                        <span className="inline-flex items-center rounded-xs bg-blue-50 px-1 text-[10px] font-bold text-[#2874f0]">
+                          ✓ Verified
                         </span>
                       </div>
-                      <div className="flex items-center justify-between gap-4 border-t border-gray-3 pt-3">
-                        <span className="text-base font-semibold text-dark">Total</span>
-                        <span className="text-base font-semibold text-dark">
-                          {getCurrencyDetails().currencySymbol} {totalAmount.toFixed(2)}
+
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <span className="text-sm font-bold text-[#212121]">
+                          {currency}{Number(product.price * (product.quantity || 1)).toFixed(2)}
+                        </span>
+                        <span className="text-xs text-[#878787]">
+                          ({currency}{Number(product.price).toFixed(2)} x {product.quantity || 1})
                         </span>
                       </div>
                     </div>
                   </div>
-
-                  <div className="surface-card p-5 sm:p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                      Notes
-                    </p>
-                    <h2 className="mt-3 text-lg font-semibold text-dark">Order Notes</h2>
-                    <p className="mt-3 whitespace-pre-line text-dark-4">
-                      {data?.notes || "No notes added for this order."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="surface-card p-5 sm:p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                        Dispute
-                      </p>
-                      <h2 className="mt-2 text-lg font-semibold text-dark">
-                        Order dispute support
-                      </h2>
-                      {!dispute && !data?.isAdmin && (
-                        <p className="mt-3 text-sm text-dark-4">
-                          If there is an issue with this order, raise a dispute and the admin
-                          team will be notified by email.
-                        </p>
-                      )}
-                      {!dispute && data?.isAdmin && (
-                        <p className="mt-3 text-sm text-dark-4">
-                          Review the dispute status for this order here when a customer raises one.
-                        </p>
-                      )}
-                    </div>
-                    {!data?.isAdmin && !dispute && (
-                      <button
-                        type="button"
-                        onClick={openCreateDisputeModal}
-                        className="btn-primary px-5 text-sm"
-                      >
-                        Raise a Dispute
-                      </button>
-                    )}
-                  </div>
-
-                    {dispute ? (
-                      <div className="mt-5 rounded-[24px] border border-red-100 bg-red-50/70 p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="mt-0 whitespace-pre-line text-dark-4">
-                            {dispute.message}
-                            {dispute.updatedAt && (
-                              <span className="ml-2 whitespace-nowrap text-sm font-medium text-red-700">
-                                (Edited)
-                              </span>
-                            )}
-                          </p>
-                          {!data?.isAdmin && dispute.status === "OPEN" && (
-                            <button
-                              type="button"
-                              onClick={openEditDisputeModal}
-                              className="shrink-0 rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:border-red-300 hover:bg-red-100"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </div>
-                        <p className="mt-3 text-sm text-dark-4">
-                          Raised on{" "}
-                          {dispute.createdAt ? new Date(dispute.createdAt).toLocaleString() : "-"}
-                        </p>
-                      </div>
-                  ) : (
-                    <div className="mt-5 rounded-[24px] border border-dashed border-gray-3 bg-slate-50/60 p-5 text-sm text-dark-4">
-                      No dispute has been raised for this order.
-                    </div>
-                  )}
-                </div>
-
+                ))}
               </div>
 
-              <div className="space-y-6">
-                {statusInfo?.status && nextSteps.length > 0 && (
-                  <div className="surface-card p-5 sm:p-6">
-                    <div className="mb-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                        Status
+              {/* Courier info highlight if in transit */}
+              {courier && trackingId && (
+                <div className="mt-5 rounded-xs border border-blue-100 bg-blue-50/70 p-3 text-xs text-[#2874f0]">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        Courier: <span className="text-[#2874f0]">{courier}</span>
                       </p>
-                      <h2 className="mt-2 text-xl font-semibold text-dark">
-                        Change Order Status
-                      </h2>
-                      <p className="mt-2 text-sm text-dark-4">
-                        Move the order to its next valid stage.
+                      <p className="mt-0.5 font-mono text-[11px] text-gray-700">
+                        AWB: <strong>{trackingId}</strong>
                       </p>
                     </div>
-                    <Select
-                      value={statusInfo?.status}
-                      onChange={(value) => setStatusInfo({ status: value, isConfirm: true })}
-                      style={{ width: "100%" }}
-                      className="bg-gray"
-                    >
-                      {nextSteps.map((item) => (
-                        <Select.Option key={item} value={item}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                              style={{
-                                width: 16,
-                                height: 16,
-                                display: "inline-block",
-                                borderRadius: 4,
-                                border: "1px solid #ccc",
-                                ...ORDER_STATUS_COLOR[item],
-                              }}
-                            />
-                            {formatStatusLabel(item)}
-                          </div>
-                        </Select.Option>
-                      ))}
-                    </Select>
-                    <ModalInfo
-                      content={
-                        <div>
-                          <div>
-                            Are you proceed to{" "}
-                            <span style={ORDER_STATUS_COLOR[statusInfo.status]}>
-                              {" "}
-                              {formatStatusLabel(statusInfo.status)}{" "}
-                            </span>{" "}
-                            this order ?
-                          </div>
-                          {[ORDER_STATUS.REJECTED].includes(statusInfo.status) && (
-                            <Input
-                              className="mt-3"
-                              type="text"
-                              placeholder="Enter comments"
-                              value={statusInfo?.meta?.comments || ""}
-                              onChange={(e) =>
-                                setStatusInfo((prev) => ({
-                                  ...prev,
-                                  meta: { comments: e.target.value },
-                                }))
-                              }
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={copyTrackingNumber}
+                        className="rounded-xs border border-blue-200 bg-white px-2 py-1 text-[11px] font-semibold text-[#2874f0] hover:bg-blue-100 cursor-pointer"
+                      >
+                        {copiedTracking ? "✓ Copied" : "Copy AWB"}
+                      </button>
+
+                      {courierLink !== "#" && (
+                        <a
+                          href={courierLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-xs bg-[#2874f0] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#1a5bc7]"
+                        >
+                          Track ›
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Flipkart Stepper Timeline (Right: 7 cols) */}
+            <div className="lg:col-span-7 lg:pl-4">
+              <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#878787]">
+                Order Progress & Delivery Status
+              </h3>
+
+              {!isCancelled ? (
+                <div className="relative pl-3">
+                  <div className="space-y-6">
+                    {FLIPKART_STAGES.map((stage, idx) => {
+                      const isCompleted = idx <= currentStageIdx;
+                      const isCurrent = idx === currentStageIdx;
+
+                      return (
+                        <div key={stage.key} className="relative flex items-start gap-4">
+                          {/* Connector vertical line */}
+                          {idx < FLIPKART_STAGES.length - 1 && (
+                            <div
+                              className={`absolute left-[9px] top-5 h-full w-[2px] ${
+                                idx < currentStageIdx ? "bg-[#26a541]" : "bg-gray-200"
+                              }`}
                             />
                           )}
+
+                          {/* Stepper Dot */}
+                          <div
+                            className={`relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-2xs ${
+                              isCompleted
+                                ? "bg-[#26a541] ring-3 ring-green-100"
+                                : "border border-gray-300 bg-gray-200 text-gray-400"
+                            }`}
+                          >
+                            {isCompleted ? "✓" : ""}
+                          </div>
+
+                          {/* Stage Text */}
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`text-sm font-semibold ${
+                                isCurrent
+                                  ? "text-[#2874f0]"
+                                  : isCompleted
+                                  ? "text-[#212121]"
+                                  : "text-gray-400"
+                              }`}
+                            >
+                              {stage.label}
+                            </p>
+                            <p className="text-xs text-[#878787]">
+                              {isCompleted && idx === 0 && data?.createdAt
+                                ? `Confirmed on ${dateFormatter(data.createdAt)}`
+                                : isCompleted && isDelivered && idx === 3
+                                ? `Delivered on ${dateFormatter(data.updatedAt || data.createdAt)}`
+                                : stage.subtext}
+                            </p>
+                          </div>
                         </div>
-                      }
-                      isOpen={statusInfo.isConfirm}
-                      onClose={() => {
-                        setStatusInfo({ status: data?.status });
-                      }}
-                      onOk={handleUpdateStatus}
-                    />
+                      );
+                    })}
                   </div>
-                )}
-
-                {(data?.isAdmin || data?.additionalInfo?.courier) && (
-                  <div className="surface-card p-5 sm:p-6">
-                    <CourierDetails
-                      couriers={couriers}
-                      handleChange={handleChange}
-                      additionalInfo={data?.additionalInfo}
-                      isAdmin={data?.isAdmin}
-                      onSubmit={handleUpdateOrder}
-                    />
+                </div>
+              ) : (
+                <div className="rounded-xs border border-red-200 bg-red-50 p-4 text-xs text-red-800">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#ff6161]" />
+                    <span className="font-bold text-sm text-[#ff6161]">Order Cancelled</span>
                   </div>
-                )}
+                  <p className="mt-2 text-xs text-gray-700">
+                    This order was {formatStatusLabel(data?.status)}. If payment was already debited, the refund will be credited back to the original payment source within 3–5 working days.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-                <div className="surface-card p-5 sm:p-6">
-                  <OrderStatusTimeline history={orderStatusHistory} />
+        {/* 3. Bottom Grid: Price Details + Dispute Card */}
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-12">
+          {/* Price Details (Flipkart Signature Card) */}
+          <div className="md:col-span-6 lg:col-span-5">
+            <div className="rounded-sm border border-[#e0e0e0] bg-white p-5 shadow-2xs">
+              <h3 className="border-b border-[#f0f0f0] pb-3 text-sm font-bold uppercase tracking-wider text-[#878787]">
+                Price Details
+              </h3>
+
+              <div className="mt-3 space-y-2.5 text-sm">
+                <div className="flex items-center justify-between text-gray-700">
+                  <span>List Price ({productItems.length} items)</span>
+                  <span>{currency}{Number(totalAmount).toFixed(2)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-gray-700">
+                  <span>Delivery Charges</span>
+                  <span className="font-medium text-[#26a541]">
+                    {getShippingDisplay(data?.shippingAmount) === "Free" || Number(data?.shippingAmount || 0) === 0
+                      ? "FREE"
+                      : `${currency}${Number(data?.shippingAmount || 0).toFixed(2)}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-dashed border-[#e0e0e0] pt-3 text-base font-bold text-[#212121]">
+                  <span>Total Amount</span>
+                  <span>{currency}{Number(totalAmount).toFixed(2)}</span>
+                </div>
+
+                <div className="border-t border-[#f0f0f0] pt-2 text-xs text-[#878787]">
+                  <span>Payment Mode: </span>
+                  <strong className="text-gray-800">{data?.paymentType || "Online Payment"}</strong>
                 </div>
               </div>
             </div>
-          </form>
+          </div>
+
+          {/* Dispute & Support Details */}
+          <div className="md:col-span-6 lg:col-span-7">
+            <div className="rounded-sm border border-[#e0e0e0] bg-white p-5 shadow-2xs h-full flex flex-col justify-between">
+              <div>
+                <h3 className="border-b border-[#f0f0f0] pb-3 text-sm font-bold uppercase tracking-wider text-[#878787]">
+                  Customer Support & Help
+                </h3>
+
+                {dispute ? (
+                  <div className="mt-3 rounded-xs border border-red-200 bg-red-50/60 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center rounded-full bg-red-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                        Dispute {dispute.status}
+                      </span>
+                      {!data?.isAdmin && dispute.status === "OPEN" && (
+                        <button
+                          type="button"
+                          onClick={openEditDisputeModal}
+                          className="text-xs font-semibold text-[#2874f0] hover:underline cursor-pointer"
+                        >
+                          Edit Dispute
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs text-gray-800 whitespace-pre-line leading-relaxed">
+                      {dispute.message}
+                    </p>
+                    <p className="mt-2 text-[11px] text-[#878787]">
+                      Raised on {dispute.createdAt ? new Date(dispute.createdAt).toLocaleString() : "-"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-3 text-xs text-[#878787] leading-relaxed">
+                    <p>
+                      Have an issue with this order? Whether it is related to damaged products, delayed delivery, or return queries, you can report an issue to our support team anytime.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={openCreateDisputeModal}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-sm bg-[#2874f0] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1a5bc7] cursor-pointer"
+                    >
+                      Report an Issue / Raise Dispute
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Order Notes if present */}
+              {data?.notes && (
+                <div className="mt-4 border-t border-[#f0f0f0] pt-3 text-xs text-[#878787]">
+                  <span>Order Note: </span>
+                  <span className="text-gray-700">{data.notes}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </section>
+
+        {/* 4. Administrative Controls (Visible only to Admin accounts) */}
+        {data?.isAdmin && (
+          <div className="mt-4 rounded-sm border border-amber-200 bg-amber-50/50 p-5 shadow-2xs">
+            <h3 className="border-b border-amber-200 pb-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+              Admin Order Management Panel
+            </h3>
+
+            <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Status Update */}
+              <div>
+                <p className="mb-2 text-xs font-semibold text-gray-700">Change Status:</p>
+                <Select
+                  value={statusInfo?.status}
+                  onChange={(value) => setStatusInfo({ status: value, isConfirm: true })}
+                  style={{ width: "100%" }}
+                >
+                  {nextSteps.map((item: string) => (
+                    <Select.Option key={item} value={item}>
+                      {formatStatusLabel(item)}
+                    </Select.Option>
+                  ))}
+                </Select>
+
+                <ModalInfo
+                  content={
+                    <div>
+                      <p>
+                        Proceed to set order status to{" "}
+                        <strong>{formatStatusLabel(statusInfo?.status)}</strong>?
+                      </p>
+                      {[ORDER_STATUS.REJECTED].includes(statusInfo?.status) && (
+                        <Input
+                          className="mt-3"
+                          type="text"
+                          placeholder="Enter rejection comments"
+                          value={statusInfo?.meta?.comments || ""}
+                          onChange={(e) =>
+                            setStatusInfo((prev: any) => ({
+                              ...prev,
+                              meta: { comments: e.target.value },
+                            }))
+                          }
+                        />
+                      )}
+                    </div>
+                  }
+                  isOpen={statusInfo?.isConfirm}
+                  onClose={() => setStatusInfo({ status: data?.status })}
+                  onOk={handleUpdateStatus}
+                />
+              </div>
+
+              {/* Courier Update */}
+              <div>
+                <CourierDetails
+                  couriers={couriers}
+                  handleChange={handleChange}
+                  additionalInfo={data?.additionalInfo}
+                  isAdmin={data?.isAdmin}
+                  onSubmit={handleUpdateOrder}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dispute Modal */}
       <ModalInfo
         isOpen={isDisputeModalOpen}
         onClose={() => {
@@ -489,29 +660,24 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
         onOk={handleRaiseDispute}
         content={
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-              {isEditingDispute ? "Edit dispute" : "Raise dispute"}
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-dark">
-              {isEditingDispute ? "Update the issue details" : "Report an issue with this order"}
-            </h2>
-            <p className="mt-3 text-sm text-dark-4">
-              {isEditingDispute
-                ? "Your updated message will be attached to the order and sent to the admin team."
-                : "This message will be sent to the admin team and attached to the order."}
+            <h3 className="text-base font-bold text-[#212121]">
+              {isEditingDispute ? "Update Order Dispute" : "Report an Issue with Order"}
+            </h3>
+            <p className="mt-1 text-xs text-[#878787]">
+              Our support team will review your message and reply via email within 24 hours.
             </p>
             <Input.TextArea
-              className="mt-4"
-              rows={5}
+              className="mt-3 rounded-sm text-xs"
+              rows={4}
               maxLength={1000}
-              placeholder="Describe the issue with this order"
+              placeholder="Describe what went wrong (e.g., damaged product, missing item)..."
               value={disputeMessage}
               onChange={(e) => setDisputeMessage(e.target.value)}
             />
           </div>
         }
       />
-    </>
+    </div>
   );
 };
 
