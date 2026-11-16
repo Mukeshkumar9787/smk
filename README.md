@@ -1,9 +1,10 @@
 # SMK
 
 [![Storefront Deployment](https://img.shields.io/badge/Storefront-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://smk-tan.vercel.app/)
+[![Chatbot Service](https://img.shields.io/badge/Chatbot%20Service-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://chatbot-service-three.vercel.app)
 [![Agents Deployment](https://img.shields.io/badge/Multi--Agent%20System-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ecommerce-agents.onrender.com)
 
-> **SMK** is a production-grade, full-stack e-commerce application with a customer storefront, checkout flow, role-protected administration features, and autonomous inventory replenishment powered by event-driven multi-agent AI.
+> **SMK** is a production-grade, full-stack e-commerce application with a customer storefront, checkout flow, role-protected administration features, autonomous inventory replenishment powered by event-driven multi-agent AI, and an intelligent RAG chatbot assistant.
 
 ---
 
@@ -11,8 +12,130 @@
 
 | Service | Environment / Platform | Direct URL | Description |
 | :--- | :--- | :--- | :--- |
-| **🛍️ SMK Storefront & Customer Web App** | **Vercel** | [https://smk-tan.vercel.app/](https://smk-tan.vercel.app/) | Live production customer storefront, catalog browsing, cart, and checkout. |
+| **🛍️ SMK Storefront & Customer Web App** | **Vercel** | [https://smk-tan.vercel.app/](https://smk-tan.vercel.app/) | Live production customer storefront, catalog browsing, cart, Flipkart-style order tracking, and embedded assistant. |
+| **💬 Intelligent RAG Chatbot Service** | **Vercel** | [https://chatbot-service-three.vercel.app](https://chatbot-service-three.vercel.app) | Live production document-grounded RAG assistant, knowledge ingestion portal, sub-40ms semantic caching & guardrails. |
 | **🤖 Autonomous Procurement Multi-Agent Hub** | **Render** | [https://ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) | Real-time multi-agent command center, PO approval UI, and ERP datastore. |
+
+---
+
+## 🏛️ Full System Architecture & Inter-Service Communication
+
+SMK operates as a distributed, event-driven ecosystem composed of three primary applications:
+1. **🛍️ SMK E-Commerce Platform** (`web_client` + `server`): Live at [https://smk-tan.vercel.app/](https://smk-tan.vercel.app/) — Customer storefront, product catalog, cart, checkout flow, Razorpay payments, Flipkart-style order tracking, and administration dashboard.
+2. **🤖 Autonomous Multi-Agent Procurement System** (`ecommerce-agents`): Live at [https://ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) — Event-driven inventory monitoring, sales velocity burn-rate forecasting, draft PO generation, and Human-in-the-Loop approval via Kafka and Slack.
+3. **💬 Intelligent RAG Assistant & Chatbot Service** (`chatbot-service`): Live at [https://chatbot-service-three.vercel.app](https://chatbot-service-three.vercel.app) — Storefront AI assistant powered by Qdrant vector retrieval, Google Gemini generation, sub-40ms semantic caching, and strict input/output guardrails.
+
+### Service-Level Architecture Diagram
+
+```mermaid
+flowchart TD
+    %% Service Styling & Theme Classes
+    classDef clientSvc fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+    classDef appSvc fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef agentSvc fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff;
+    classDef chatbotSvc fill:#4c1d95,stroke:#a855f7,stroke-width:2px,color:#ffffff;
+    classDef dataSvc fill:#451a03,stroke:#f59e0b,stroke-width:2px,color:#ffffff;
+    classDef brokerSvc fill:#3730a3,stroke:#6366f1,stroke-width:2px,color:#ffffff;
+    classDef extSvc fill:#701a75,stroke:#ec4899,stroke-width:2px,color:#ffffff;
+
+    subgraph CLIENT_TIER["1. Frontend & Client Services"]
+        STOREFRONT_SVC["SMK Storefront Service (smk-tan.vercel.app)"]:::clientSvc
+    end
+
+    subgraph APP_TIER["2. Application & Backend Services"]
+        ECOM_API_SVC["SMK E-Commerce API Service (Node.js / Express 5)"]:::appSvc
+        CHATBOT_SVC["Intelligent RAG Chatbot Service (chatbot-service-three.vercel.app)"]:::chatbotSvc
+        AGENT_HUB_SVC["Autonomous Multi-Agent Hub (ecommerce-agents.onrender.com)"]:::agentSvc
+    end
+
+    subgraph EVENT_TIER["3. Event Streaming & Messaging Service"]
+        KAFKA_SVC["Apache Kafka Message Broker Service"]:::brokerSvc
+    end
+
+    subgraph DB_TIER["4. Database & Storage Services"]
+        ECOM_DB_SVC[("SMK E-Commerce PostgreSQL Database Service")]:::dataSvc
+        CHATBOT_DB_SVC[("Chatbot PostgreSQL Database Service")]:::dataSvc
+        QDRANT_DB_SVC[("Qdrant Cloud Vector Database Service")]:::dataSvc
+        ERP_DB_SVC[("Mock ERP Datastore Service")]:::dataSvc
+        R2_STORAGE_SVC[("Cloudflare R2 Object Storage Service")]:::dataSvc
+    end
+
+    subgraph EXTERNAL_TIER["5. External Cloud & Gateway Services"]
+        RAZORPAY_SVC["Razorpay Payment Gateway Service"]:::extSvc
+        SLACK_SVC["Slack HITL Approval Service"]:::extSvc
+        GEMINI_SVC["Google Gemini AI Service"]:::extSvc
+        TURNSTILE_SVC["Cloudflare Turnstile Bot Protection Service"]:::extSvc
+        SMTP_SVC["SMTP Mail Delivery Service"]:::extSvc
+    end
+
+    %% Client Service Connections
+    STOREFRONT_SVC -->|HTTPS REST and JWT Auth| ECOM_API_SVC
+    STOREFRONT_SVC -->|HTTPS SSE Chat Stream| CHATBOT_SVC
+
+    %% E-Commerce API Service Communications
+    ECOM_API_SVC -->|TCP SQL Queries via Prisma| ECOM_DB_SVC
+    ECOM_API_SVC -->|Payment Order and Signature Verification| RAZORPAY_SVC
+    ECOM_API_SVC -->|Deliver Email OTPs and Restock Alerts| SMTP_SVC
+    ECOM_API_SVC -->|Upload and Fetch Media Assets| R2_STORAGE_SVC
+    ECOM_API_SVC -->|Produce inventory-events Topic| KAFKA_SVC
+    ECOM_API_SVC -.->|Internal User Role Sync Webhook| CHATBOT_SVC
+
+    %% Autonomous Agent Hub Service Communications
+    KAFKA_SVC -->|Consume inventory-events Topic| AGENT_HUB_SVC
+    AGENT_HUB_SVC -->|Read and Write Purchase Orders| ERP_DB_SVC
+    AGENT_HUB_SVC -->|Interactive Approval Block Kit Cards| SLACK_SVC
+    SLACK_SVC -->|Manager Clicks Approve Reorder| AGENT_HUB_SVC
+    AGENT_HUB_SVC -->|Produce inventory-restock Topic| KAFKA_SVC
+    KAFKA_SVC -->|Consume inventory-restock Topic| ECOM_API_SVC
+
+    %% Chatbot RAG Service Communications
+    CHATBOT_SVC -->|Verify Bot Token| TURNSTILE_SVC
+    CHATBOT_SVC -->|Persist Conversations and Messages| CHATBOT_DB_SVC
+    CHATBOT_SVC -->|Vector Search and Semantic Cache Lookup| QDRANT_DB_SVC
+    CHATBOT_SVC -->|Generate Embeddings and Grounded Answers| GEMINI_SVC
+```
+
+---
+
+### Core Inter-Service Communication Flows
+
+#### 1. Customer Checkout & Event-Driven Autonomous Procurement
+1. **Order Verified**: Customer completes payment via Razorpay. The Express server initiates a database transaction to mark the order `PLACED` and decrement inventory in PostgreSQL.
+2. **Outbound Event Dispatch**: [`inventoryAgentProducer.js`](server/services/inventoryAgentProducer.js) dispatches an event to Kafka topic `inventory-events`.
+3. **Agent Ingestion & Analysis**: The external Python agent hub ([`ecommerce-agents.onrender.com`](https://ecommerce-agents.onrender.com)) consumes the event, applies a zero-token pre-filter, and triggers the `Inventory Analyst` and `PO Manager` agents using LangGraph.
+4. **Human-in-the-Loop (HITL)**: An interactive Slack card is dispatched to `#procurement-alerts` alongside a web entry on the Command Center UI ([`ecommerce-agents.onrender.com`](https://ecommerce-agents.onrender.com)).
+5. **Replenishment Fulfillment**: Upon approval, the agent emits a `STOCK_RESTOCK` event to Kafka topic `inventory-restock`.
+6. **Stock Restored & Alerts**: [`inventoryRestockConsumer.js`](server/services/inventoryRestockConsumer.js) consumes the event, enforces business capping constraints, increments inventory via Prisma, and automatically emails customers on the waiting list.
+
+#### 2. Live RAG Chatbot Service (`https://chatbot-service-three.vercel.app`) with Semantic Caching
+1. **Client Interaction**: Storefront visitors on [`https://smk-tan.vercel.app`](https://smk-tan.vercel.app/) interact with the embedded AI assistant widget, sending queries to `https://chatbot-service-three.vercel.app/api/chat`.
+2. **Rate Limiting & CAPTCHA**: Inbound queries pass through the in-memory IP rate limiter and Cloudflare Turnstile token verifier.
+3. **Input Guardrail**: Evaluates query for prompt injections, credit card PII, character flooding, and excessive length.
+4. **Semantic Cache Lookup**: The query is converted into a 768-dim dense vector using `gemini-embedding-2`. The cache collection `chatbot_semantic_cache` in Qdrant Cloud is evaluated:
+   - **Cache Hit ($\ge 0.90$ Cosine Similarity)**: Instantly returns the cached, guardrail-sanitized answer and sources in **$\le 40\text{ms}$** with zero LLM token consumption.
+   - **Cache Miss**: Qdrant Cloud retrieves grounded chunks from `store_knowledge_base`, and Google Gemini (`gemini-flash-lite-latest`) synthesizes the answer.
+5. **Output Guardrail & Streaming**: The generated response is streamed chunk-by-chunk through the output guardrail (redacting leaked credentials, rewriting links to canonical `/my-account` paths, and whitelisting carrier tracking domains).
+6. **Cache Upsert**: Clean answers are stored in `chatbot_semantic_cache` with a 7-day TTL.
+7. **Automatic Invalidation**: Whenever an admin uploads, edits, or deletes a knowledge base document in `/api/documents`, the semantic cache is automatically purged so answers are never stale.
+
+#### 3. Cross-Service User Role Synchronization
+- When user permissions change in the primary e-commerce system (e.g., user promoted to `ADMIN`), the Express backend notifies the Chatbot service via `POST https://chatbot-service-three.vercel.app/api/sync/user-role` authenticated with `x-internal-service-key` HMAC.
+- Ensures customer support and administrative knowledge policies apply consistently across both platforms.
+
+---
+
+### Network & Port Communication Matrix
+
+| Service | Environment & Live Deployment | Port / Protocol | Communicates With | Role / Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **🛍️ Storefront Web Client** | **Vercel**: [smk-tan.vercel.app](https://smk-tan.vercel.app/) | `3000` / HTTPS | Browser, Express API (`4000`), Chatbot Service | Customer UI, shopping cart, checkout, Flipkart-style order tracking. |
+| **💬 RAG Chatbot Service** | **Vercel**: [chatbot-service-three.vercel.app](https://chatbot-service-three.vercel.app) | `8005` / HTTPS (SSE) | Storefront Widget, Qdrant Cloud (`6333`), Gemini API, PostgreSQL | RAG conversational assistant, sub-40ms semantic caching, guardrails. |
+| **🤖 Autonomous Agent Hub** | **Render**: [ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) | `8002` / HTTPS | Kafka (`9092`), Slack API, Mock ERP DB | Autonomous inventory analysis, PO drafting, Slack HITL approvals. |
+| **⚙️ E-Commerce API Server** | Node.js / Express 5 | `4000` / HTTP / REST | Web Client, PostgreSQL, Kafka (`9092`), Razorpay, R2, SMTP | Core e-commerce domain API, auth, orders, catalog, audit logs. |
+| **🗄️ Primary Database** | PostgreSQL 15 | `5432` / TCP | Express API Server (via Prisma ORM) | Relational persistence for orders, users, catalog, stock. |
+| **📨 Apache Kafka Broker** | Kafka / KRaft | `9092` / TCP | Express Producer/Consumer, Python Agent Swarm | Distributed message broker for event-driven replenishment. |
+| **🎯 Vector Database** | Qdrant Cloud (AWS sa-east-1) | `6333` / HTTPS | Chatbot Service | Pure vector storage for store knowledge base & semantic cache points. |
+| **💬 Chatbot Database** | PostgreSQL (Prisma Cloud) | `5432` / TCP | Chatbot Service | Storage for conversation threads, messages, synced user roles. |
 
 ---
 
