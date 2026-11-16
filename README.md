@@ -1,29 +1,66 @@
-# SMK
+# SMK — Autonomous Agent-Powered E-Commerce Ecosystem
 
 [![Storefront Deployment](https://img.shields.io/badge/Storefront-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://smk-tan.vercel.app/)
 [![Chatbot Service](https://img.shields.io/badge/Chatbot%20Service-Vercel-black?style=for-the-badge&logo=vercel&logoColor=white)](https://chatbot-service-three.vercel.app)
 [![Agents Deployment](https://img.shields.io/badge/Multi--Agent%20System-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ecommerce-agents.onrender.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-> **SMK** is a production-grade, full-stack e-commerce application with a customer storefront, checkout flow, role-protected administration features, autonomous inventory replenishment powered by event-driven multi-agent AI, and an intelligent RAG chatbot assistant.
+> **SMK** is the core anchor repository of a production-grade, event-driven intelligent retail ecosystem. It combines a full-stack e-commerce application (customer storefront, checkout flow, role-protected admin dashboard) with an autonomous multi-agent inventory procurement system powered by **LangGraph**, **Apache Kafka**, and **Human-in-the-Loop (HITL)** governance, alongside a document-grounded **Qdrant RAG AI Assistant**.
 
 ---
 
-## 🌐 Live Deployments & Quick Access
+## 🎬 System Demo Walkthrough
 
-| Service | Environment / Platform | Direct URL | Description |
-| :--- | :--- | :--- | :--- |
-| **🛍️ SMK Storefront & Customer Web App** | **Vercel** | [https://smk-tan.vercel.app/](https://smk-tan.vercel.app/) | Live production customer storefront, catalog browsing, cart, Flipkart-style order tracking, and embedded assistant. |
-| **💬 Intelligent RAG Chatbot Service** | **Vercel** | [https://chatbot-service-three.vercel.app](https://chatbot-service-three.vercel.app) | Live production document-grounded RAG assistant, knowledge ingestion portal, sub-40ms semantic caching & guardrails. |
-| **🤖 Autonomous Procurement Multi-Agent Hub** | **Render** | [https://ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) | Real-time multi-agent command center, PO approval UI, and ERP datastore. |
+<video src="https://github.com/user-attachments/assets/ee9a6974-0c94-4a0e-b60c-b0a06c8a9a3c" controls="controls" muted="muted" style="max-width: 100%; width: 100%; border-radius: 8px;">
+</video>
+
+> 📹 *Watch the full end-to-end autonomous procurement flow: customer purchase triggering Kafka events, LangGraph multi-agent decisioning, Slack HITL approval, and inventory restock.*
+> 
+> 🔗 **Direct Demo Link:** [Watch Demo Video (GitHub Assets)](https://github.com/user-attachments/assets/ee9a6974-0c94-4a0e-b60c-b0a06c8a9a3c)  
+> 🔗 **Backup Video Link:** [Watch full demonstration on Google Drive](https://drive.google.com/file/d/1sBuaMPiN2w7JuetGcy_JzI0B29fD22mz/view?usp=sharing)
+
+---
+
+## 🌐 Distributed Ecosystem & Source Repositories
+
+This project operates as a distributed microservice ecosystem. SMK serves as the **primary application hub**, integrating with dedicated repositories for multi-agent procurement and knowledge-grounded AI:
+
+| Component / Subsystem | Tech Stack | Repository | Live Deployment | Core Responsibilities |
+| :--- | :--- | :--- | :--- | :--- |
+| **🛍️ SMK E-Commerce Platform**<br>*(This Main Repository)* | Next.js 16, Express 5, Prisma, PostgreSQL | [Mukeshkumar9787/dams](https://github.com/Mukeshkumar9787/dams) | [smk-tan.vercel.app](https://smk-tan.vercel.app/) | Customer storefront (`web_client`), REST API server (`server`), order tracking, Razorpay checkout, Kafka event producers/consumers. |
+| **🤖 Autonomous Procurement Hub** | Python 3.11, LangGraph, Kafka, FastAPI, Slack | [Mukeshkumar9787/ecommerce-agents](https://github.com/Mukeshkumar9787/ecommerce-agents) | [ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) | Autonomous inventory velocity analysis, draft PO generation, Mock ERP telemetry, and Slack HITL interactive approval cards. |
+| **💬 Intelligent RAG Chatbot Service** | Next.js 14, Qdrant Vector Cloud, Gemini AI, Sequelize | [Mukeshkumar9787/chatbot-service](https://github.com/Mukeshkumar9787/chatbot-service) | [chatbot-service-three.vercel.app](https://chatbot-service-three.vercel.app) | Knowledge base ingestion, dense vector search, sub-40ms semantic caching, security guardrails, and customer support widget. |
 
 ---
 
 ## 🏛️ Full System Architecture & Inter-Service Communication
 
-SMK operates as a distributed, event-driven ecosystem composed of three primary applications:
-1. **🛍️ SMK E-Commerce Platform** (`web_client` + `server`): Live at [https://smk-tan.vercel.app/](https://smk-tan.vercel.app/) — Customer storefront, product catalog, cart, checkout flow, Razorpay payments, Flipkart-style order tracking, and administration dashboard.
-2. **🤖 Autonomous Multi-Agent Procurement System** (`ecommerce-agents`): Live at [https://ecommerce-agents.onrender.com](https://ecommerce-agents.onrender.com) — Event-driven inventory monitoring, sales velocity burn-rate forecasting, draft PO generation, and Human-in-the-Loop approval via Kafka and Slack.
-3. **💬 Intelligent RAG Assistant & Chatbot Service** (`chatbot-service`): Live at [https://chatbot-service-three.vercel.app](https://chatbot-service-three.vercel.app) — Storefront AI assistant powered by Qdrant vector retrieval, Google Gemini generation, sub-40ms semantic caching, and strict input/output guardrails.
+### High-Level Topology Overview
+
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        SMK E-COMMERCE APPLICATION (Main Repo)                          │
+│                             https://smk-tan.vercel.app/                                │
+│                                                                                        │
+│  [Customer Checkout] ──► [Stock Decrement] ──► [Kafka Topic: inventory-events]         │
+│           ▲                                                   │                        │
+│           │                                                   ▼                        │
+│  [Stock Restocked in DB] ◄── [Kafka Topic: inventory-restock] │                        │
+└───────────────────────────────────────────────────────────────┼────────────────────────┘
+                                                                │
+                                                                ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                   AUTONOMOUS PROCUREMENT MULTI-AGENT SYSTEM (Render)                   │
+│                        https://ecommerce-agents.onrender.com                           │
+│                                                                                        │
+│  1. 🛡️ Deterministic Zero-Token Filter (Cost optimization gate)                        │
+│  2. 🧠 Supervisor Agent (LangGraph routing)                                            │
+│  3. 📊 Inventory Analyst Agent (Sales velocity, burn rate, supplier terms, cap < 20)   │
+│  4. 📝 Purchase Order Manager Agent (Draft PO creation)                                │
+│  5. 👥 Human-in-the-Loop Approval (Slack Block Kit & Command Center UI)                │
+│  6. 🚀 Automated Restock Event (Emits to inventory-restock on approval)                │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Service-Level Architecture Diagram
 
