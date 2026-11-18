@@ -53,9 +53,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [tenant, basePath, compInfo, initialCategories] = await Promise.all([
-    fetchCurrentTenantServer(),
+  const [{ tenant, errorCode }, basePath] = await Promise.all([
+    fetchTenantResolutionServer(),
     getServerTenantBasePath(),
+  ]);
+  if (errorCode) return null;
+
+  const [compInfo, initialCategories] = await Promise.all([
     fetchCompanyInfoServer(600),
     fetchActiveCategoriesServer(false, 300),
   ]);

@@ -40,10 +40,27 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPageLoadingRef = useRef(false);
   const [pendingGetRequests, setPendingGetRequests] = useState(0);
+  const [unavailableCode, setUnavailableCode] = useState<
+    "TENANT_SUSPENDED" | "TENANT_NOT_FOUND" | null
+  >(null);
 
   useEffect(() => {
     const unsubscribe = subscribeApiLoader(setPendingGetRequests);
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const handleTenantUnavailable = (event: Event) => {
+      const code = (event as CustomEvent)?.detail?.code;
+      if (code === "TENANT_SUSPENDED" || code === "TENANT_NOT_FOUND") {
+        setUnavailableCode(code);
+        setShowLoader(false);
+      }
+    };
+    window.addEventListener("tenant:unavailable", handleTenantUnavailable);
+    return () => {
+      window.removeEventListener("tenant:unavailable", handleTenantUnavailable);
+    };
   }, []);
 
   useEffect(() => {
@@ -181,6 +198,27 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+
+  if (unavailableCode) {
+    const isSuspended = unavailableCode === "TENANT_SUSPENDED";
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-16 text-slate-900">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
+            {isSuspended ? "⏸️" : "🔍"}
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isSuspended ? "Store Currently Unavailable" : "Store Not Found"}
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            {isSuspended
+              ? "This storefront has been temporarily paused by its administrator. Please check back later."
+              : "The store link you visited does not exist or may have changed."}
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <ConfigProvider

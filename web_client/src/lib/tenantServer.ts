@@ -13,9 +13,6 @@ export interface TenantResolutionResult {
   errorCode: TenantResolutionError;
 }
 
-const TENANT_MEMORY_CACHE_TTL_MS = 60_000;
-const tenantMemoryCache = new Map<string, { value: TenantResolutionResult; expiresAt: number }>();
-
 export const getServerTenantBasePath = cache(async (): Promise<string> => {
   try {
     const hdrs = await headers();
@@ -52,71 +49,50 @@ export const fetchTenantResolutionServer = cache(
   async (): Promise<TenantResolutionResult> => {
     const tenantHeaders = await getServerTenantHeaders();
     const explicitSlug = tenantHeaders["x-tenant-slug"] || "";
-    const cacheKey = explicitSlug
-      ? `slug:${explicitSlug}`
-      : `host:${tenantHeaders["x-tenant-host"] || "default"}`;
-
-    const cached = tenantMemoryCache.get(cacheKey);
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.value;
-    }
 
     try {
       const querySuffix = explicitSlug
         ? `?tenant=${encodeURIComponent(explicitSlug)}`
         : "";
+      // Always check live tenant status (exempt from rate limits and cached in backend RAM
+      // with instant invalidation on Suspend/Activate/Branding updates) so suspending a store
+      // takes effect immediately with zero stale SSR cache window.
       const res = await fetch(`${API_BASE_URL}/tenants/resolve${querySuffix}`, {
         headers: {
           Accept: "application/json",
           "ngrok-skip-browser-warning": "1",
           ...tenantHeaders,
         },
-        next: { revalidate: 60 },
+        cache: "no-store",
         signal: AbortSignal.timeout(4000),
       });
 
       const payload = await res.json().catch(() => null);
 
       if (res.status === 403 && payload?.code === "TENANT_SUSPENDED") {
-        const result: TenantResolutionResult = {
+        return {
           tenant: DEFAULT_TENANT,
           errorCode: "TENANT_SUSPENDED",
         };
-        // Short TTL (10s) so re-activating a store takes effect almost immediately
-        tenantMemoryCache.set(cacheKey, {
-          value: result,
-          expiresAt: Date.now() + 10_000,
-        });
-        return result;
       }
 
       if (res.status === 404 && (payload?.code === "TENANT_NOT_FOUND" || explicitSlug)) {
-        const result: TenantResolutionResult = {
+        return {
           tenant: DEFAULT_TENANT,
           errorCode: "TENANT_NOT_FOUND",
         };
-        tenantMemoryCache.set(cacheKey, {
-          value: result,
-          expiresAt: Date.now() + 10_000,
-        });
-        return result;
       }
 
       if (!res.ok || !payload?.success || !payload?.data) {
-        return cached?.value || { tenant: DEFAULT_TENANT, errorCode: null };
+        return { tenant: DEFAULT_TENANT, errorCode: null };
       }
 
-      const resolved: TenantResolutionResult = {
+      return {
         tenant: payload.data as PublicTenant,
         errorCode: null,
       };
-      tenantMemoryCache.set(cacheKey, {
-        value: resolved,
-        expiresAt: Date.now() + TENANT_MEMORY_CACHE_TTL_MS,
-      });
-      return resolved;
     } catch {
-      return cached?.value || { tenant: DEFAULT_TENANT, errorCode: null };
+      return { tenant: DEFAULT_TENANT, errorCode: null };
     }
   }
 );

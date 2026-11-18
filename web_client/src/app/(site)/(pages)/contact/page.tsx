@@ -41,11 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const ContactPage = async () => {
-  const [tenant, basePath, initialCompInfo] = await Promise.all([
-    fetchCurrentTenantServer(),
+  const [{ tenant, errorCode }, basePath] = await Promise.all([
+    fetchTenantResolutionServer(),
     getServerTenantBasePath(),
-    fetchCompanyInfoServer(600),
   ]);
+  if (errorCode) return null;
+  const initialCompInfo = await fetchCompanyInfoServer(600);
   const storeName = tenant?.branding?.storeName || "SMK";
 
   const contactPageSchema = {

@@ -171,6 +171,21 @@ axiosInstance.interceptors.response.use((response) => {
       };
     }
 
+    const tenantErrorCode = error?.response?.data?.code;
+    if (
+      (error.response?.status === 403 && tenantErrorCode === "TENANT_SUSPENDED") ||
+      (error.response?.status === 404 && tenantErrorCode === "TENANT_NOT_FOUND")
+    ) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("tenant:unavailable", {
+            detail: { code: tenantErrorCode },
+          })
+        );
+      }
+      return error.response;
+    }
+
     if (error.response && error.response.status === 401) {
       if (typeof window !== 'undefined' && stripTenantPrefix(window.location.pathname) !== '/signin') {
         redirectToSignIn();

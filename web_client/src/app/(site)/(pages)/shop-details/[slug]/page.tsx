@@ -94,11 +94,12 @@ const ShopDetailsPage = async ({
 }: {
   params: Promise<{ slug: string }>;
 }) => {
-  const [resolvedParams, tenant, basePath] = await Promise.all([
+  const [resolvedParams, { tenant, errorCode }, basePath] = await Promise.all([
     params,
-    fetchCurrentTenantServer(),
+    fetchTenantResolutionServer(),
     getServerTenantBasePath(),
   ]);
+  if (errorCode) return null;
   const storeName = tenant?.branding?.storeName || "SMK";
   const { product, notFound: isNotFound } = await fetchProductBySlugServer(
     resolvedParams.slug
