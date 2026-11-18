@@ -5,28 +5,54 @@ const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api"
 ).replace(/\/+$/, "");
 
-const SERVER_FETCH_TIMEOUT_MS = 5000;
+const DEFAULT_SERVER_FETCH_TIMEOUT_MS = 5000;
+
+export interface ServerFetchOptions {
+  timeoutMs?: number;
+  retries?: number;
+}
 
 async function serverApiFetch<T = any>(
   endpoint: string,
-  revalidateSeconds = 120
+  revalidateSeconds = 120,
+  options: ServerFetchOptions = {}
 ): Promise<{ ok: boolean; status: number; payload: T | null }> {
   const url = `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "ngrok-skip-browser-warning": "1",
-      },
-      next: { revalidate: revalidateSeconds },
-      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
-    });
+  const timeoutMs = options.timeoutMs ?? DEFAULT_SERVER_FETCH_TIMEOUT_MS;
+  const maxRetries = Math.max(0, options.retries ?? 0);
 
-    const payload = await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, payload };
-  } catch {
-    return { ok: false, status: 0, payload: null };
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "ngrok-skip-browser-warning": "1",
+        },
+        next: { revalidate: revalidateSeconds },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+
+      // Retry transient cold-start / upstream gateway statuses if retries remain
+      if (
+        attempt < maxRetries &&
+        [502, 503, 504].includes(res.status)
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 2000 * (attempt + 1)));
+        continue;
+      }
+
+      const payload = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, payload };
+    } catch {
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 2000 * (attempt + 1)));
+        continue;
+      }
+      return { ok: false, status: 0, payload: null };
+    }
   }
+
+  return { ok: false, status: 0, payload: null };
 }
 
 export interface ServerProductsResult {
@@ -45,7 +71,8 @@ export async function fetchActiveProductsServer(
     search?: string;
     pagination?: boolean;
   } = {},
-  revalidateSeconds = 120
+  revalidateSeconds = 120,
+  options: ServerFetchOptions = {}
 ): Promise<ServerProductsResult> {
   const qs = new URLSearchParams();
   qs.set("status", STATUS_TYPES.ACTIVE);
@@ -61,7 +88,7 @@ export async function fetchActiveProductsServer(
     success?: boolean;
     data?: SeoProductData[];
     totalCount?: number;
-  }>(`/products/active?${qs.toString()}`, revalidateSeconds);
+  }>(`/products/active?${qs.toString()}`, revalidateSeconds, options);
 
   if (!ok || !payload?.success || !Array.isArray(payload.data)) {
     return { products: [], totalCount: 0, fetched: false };
@@ -72,6 +99,47 @@ export async function fetchActiveProductsServer(
     totalCount: Number(payload.totalCount || payload.data.length),
     fetched: true,
   };
+}
+
+export async function fetchAllActiveProductsServer(
+  revalidateSeconds = 300,
+  options: ServerFetchOptions = {}
+): Promise<SeoProductData[]> {
+  const pageSize = 100;
+  const maxPages = 50;
+  const allProducts: SeoProductData[] = [];
+  const seenSlugs = new Set<string>();
+
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+    const { products, totalCount, fetched } = await fetchActiveProductsServer(
+      { pageNumber, pageSize },
+      revalidateSeconds,
+      options
+    );
+
+    if (!fetched || products.length === 0) {
+      break;
+    }
+
+    let addedOnPage = 0;
+    for (const product of products) {
+      if (product?.slug && !seenSlugs.has(product.slug)) {
+        seenSlugs.add(product.slug);
+        allProducts.push(product);
+        addedOnPage += 1;
+      }
+    }
+
+    if (
+      addedOnPage === 0 ||
+      products.length < pageSize ||
+      (totalCount > 0 && allProducts.length >= totalCount)
+    ) {
+      break;
+    }
+  }
+
+  return allProducts;
 }
 
 export interface SeoCategoryData {
@@ -85,7 +153,8 @@ export interface SeoCategoryData {
 
 export async function fetchActiveCategoriesServer(
   includeProductCount = false,
-  revalidateSeconds = 300
+  revalidateSeconds = 300,
+  options: ServerFetchOptions = {}
 ): Promise<SeoCategoryData[]> {
   const qs = new URLSearchParams({ status: STATUS_TYPES.ACTIVE });
   if (includeProductCount) qs.set("includeProductCount", "true");
@@ -93,7 +162,7 @@ export async function fetchActiveCategoriesServer(
   const { ok, payload } = await serverApiFetch<{
     success?: boolean;
     data?: SeoCategoryData[];
-  }>(`/categories/active?${qs.toString()}`, revalidateSeconds);
+  }>(`/categories/active?${qs.toString()}`, revalidateSeconds, options);
 
   if (!ok || !payload?.success || !Array.isArray(payload.data)) {
     return [];

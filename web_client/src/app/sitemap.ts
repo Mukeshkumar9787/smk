@@ -2,10 +2,15 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
 import {
   fetchActiveCategoriesServer,
-  fetchActiveProductsServer,
+  fetchAllActiveProductsServer,
 } from "@/lib/seoServer";
 
 export const dynamic = "force-dynamic";
+
+const SITEMAP_FETCH_OPTIONS = {
+  timeoutMs: 20000,
+  retries: 1,
+};
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -31,9 +36,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const [productsResult, categories] = await Promise.all([
-    fetchActiveProductsServer({ pagination: false }, 300),
-    fetchActiveCategoriesServer(false, 300),
+  const [products, categories] = await Promise.all([
+    fetchAllActiveProductsServer(300, SITEMAP_FETCH_OPTIONS),
+    fetchActiveCategoriesServer(false, 300, SITEMAP_FETCH_OPTIONS),
   ]);
 
   const categoryRoutes: MetadataRoute.Sitemap = categories
@@ -45,7 +50,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-  const productRoutes: MetadataRoute.Sitemap = productsResult.products
+  const productRoutes: MetadataRoute.Sitemap = products
     .filter((product) => Boolean(product?.slug))
     .map((product) => ({
       url: `${SITE_URL}/shop-details/${encodeURIComponent(product.slug)}`,

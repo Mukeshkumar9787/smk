@@ -72,11 +72,14 @@ const getProducts = async ({ status, pageNumber=1, pageSize=10, search='', color
       ? PrismaConfig.sql`WHERE ${PrismaConfig.join(conditions,` AND `)}`
       : PrismaConfig.empty;
   
-  const offset = (pageNumber - 1) * pageSize;
+  const usePagination = pagination !== false && String(pagination).toLowerCase() !== "false";
+  const parsedPageNumber = Math.max(1, Number(pageNumber) || 1);
+  const parsedPageSize = Math.max(1, Number(pageSize) || 10);
+  const offset = (parsedPageNumber - 1) * parsedPageSize;
 
   let paginationClause = PrismaConfig.empty;
-  if(pagination){
-    paginationClause = PrismaConfig.sql`OFFSET ${offset} LIMIT ${pageSize}`;
+  if(usePagination){
+    paginationClause = PrismaConfig.sql`OFFSET ${offset} LIMIT ${parsedPageSize}`;
   }
 
   const [products, totalCount] = await Promise.all([
@@ -112,7 +115,7 @@ const getProducts = async ({ status, pageNumber=1, pageSize=10, search='', color
       ORDER BY p."createdAt" DESC
       ${paginationClause} ;
     `,
-    pagination 
+    usePagination
     ? 
     prisma.$queryRaw`
       SELECT COUNT(1)
@@ -131,7 +134,7 @@ const getProducts = async ({ status, pageNumber=1, pageSize=10, search='', color
     })));
   return { 
     products: finalProducts,
-    totalCount: parseInt(totalCount[0].count)
+    totalCount: usePagination ? parseInt(totalCount[0].count) : finalProducts.length
   }
 };
 
