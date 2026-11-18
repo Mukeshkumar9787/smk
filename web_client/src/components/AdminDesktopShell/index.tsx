@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { adminMenuData } from "@/components/Header/menuData";
 import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { ROLE_TYPES } from "@/utils/constants";
-import { PLATFORM_ADMIN_URL } from "@/utils/appUrls";
+import { LAUNCH_STORE_URL, PLATFORM_ADMIN_URL } from "@/utils/appUrls";
 import { useTenant } from "@/app/context/TenantContext";
 import { stripTenantPrefix } from "@/lib/tenantUrl";
 
@@ -23,6 +23,7 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
       isPlatformAdmin && tenant?.isDefault
         ? [
             { title: "Super Admin", newTab: false, path: PLATFORM_ADMIN_URL },
+            { title: "Create Store", newTab: false, path: LAUNCH_STORE_URL },
             ...adminLinks,
           ]
         : adminLinks,
@@ -31,6 +32,8 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
   const isAdminPage =
     pathname === PLATFORM_ADMIN_URL ||
     pathname.startsWith(`${PLATFORM_ADMIN_URL}/`) ||
+    pathname === LAUNCH_STORE_URL ||
+    pathname.startsWith(`${LAUNCH_STORE_URL}/`) ||
     adminLinks.some((item) =>
       item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false
     );

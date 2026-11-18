@@ -8,7 +8,9 @@ import {
 } from "@/http/apiCalls";
 import { THEME_PRESETS } from "@/lib/theme";
 import { getTenantStorageKey } from "@/lib/tenantUrl";
+import { getLoggedInUserData, getStoredToken, redirectToSignIn } from "@/utils/helper";
 import { notifyError, notifySuccess } from "@/utils/notify";
+import Link from "next/link";
 
 function slugify(text: string) {
   return text
@@ -36,10 +38,26 @@ export default function LaunchStore() {
   const [ownerMobile, setOwnerMobile] = useState("");
   const [selectedPreset, setSelectedPreset] = useState(THEME_PRESETS[0]);
   const [submitting, setSubmitting] = useState(false);
+  const [authState, setAuthState] = useState<"checking" | "authorized" | "forbidden">("checking");
 
   useEffect(() => {
-    const loadPlans = async () => {
+    const checkAccessAndLoadPlans = async () => {
+      if (!getStoredToken()) {
+        redirectToSignIn("/launch");
+        return;
+      }
       try {
+        const user = await getLoggedInUserData();
+        if (!user) {
+          redirectToSignIn("/launch");
+          return;
+        }
+        if (!user.isPlatformAdmin) {
+          setAuthState("forbidden");
+          return;
+        }
+        setAuthState("authorized");
+
         const res = await getTenantPlans();
         if (res?.success && Array.isArray(res.data)) {
           setPlans(res.data);
@@ -47,12 +65,14 @@ export default function LaunchStore() {
         }
       } catch (err) {
         console.error(err);
+        setAuthState("forbidden");
       }
     };
-    loadPlans();
+    checkAccessAndLoadPlans();
   }, []);
 
   useEffect(() => {
+    if (authState !== "authorized") return;
     const cleaned = slugify(slug);
     if (!cleaned || cleaned.length < 2) {
       setSlugStatus({ checking: false, available: null, reason: null });
@@ -78,7 +98,7 @@ export default function LaunchStore() {
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [slug]);
+  }, [slug, authState]);
 
   const handleStoreNameChange = (val: string) => {
     setStoreName(val);
@@ -125,6 +145,38 @@ export default function LaunchStore() {
       setSubmitting(false);
     }
   };
+
+  if (authState === "checking") {
+    return (
+      <section className="page-section">
+        <div className="mx-auto flex min-h-[420px] max-w-[1170px] flex-col items-center justify-center px-4">
+          <div className="h-9 w-9 animate-spin rounded-full border-3 border-blue border-t-transparent" />
+          <p className="mt-4 text-sm text-slate-500">Verifying Platform Super Admin access...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (authState === "forbidden") {
+    return (
+      <section className="page-section">
+        <div className="mx-auto max-w-lg px-4 py-12">
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-2xl font-bold text-dark">Access Restricted</h1>
+            <p className="mt-3 text-sm text-dark-4">
+              Only the Platform Super Admin can create and provision new stores.
+            </p>
+            <Link
+              href="/"
+              className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-dark"
+            >
+              Return to Store
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="page-section">

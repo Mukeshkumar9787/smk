@@ -18,14 +18,7 @@ import type { Product } from "@/types/product";
 const Header = () => {
   const router = useRouter();
   const { branding, tenant, storeHref } = useTenant();
-  const publicMenuData = React.useMemo(
-    () =>
-      tenant?.isDefault
-        ? menuData
-        : menuData.filter((item) => item.path !== LAUNCH_STORE_URL),
-    [tenant?.isDefault]
-  );
-  const [menuItems, setMenuItems] = useState(publicMenuData);
+  const [menuItems, setMenuItems] = useState(menuData);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const navRef = React.useRef<HTMLDivElement | null>(null);
   const navToggleRef = React.useRef<HTMLButtonElement | null>(null);
@@ -77,7 +70,7 @@ const Header = () => {
   useEffect(() => {
     if (!getStoredToken()) {
       setUser(null);
-      setMenuItems(publicMenuData);
+      setMenuItems(menuData);
       return;
     }
     const fetchUser = async () => {
@@ -96,25 +89,30 @@ const Header = () => {
                           newTab: false,
                           path: PLATFORM_ADMIN_URL,
                         },
+                        {
+                          title: "Create Store",
+                          newTab: false,
+                          path: LAUNCH_STORE_URL,
+                        },
                         ...(group.submenu || []),
                       ]
                     : group.submenu,
               }))
             : [];
         const authedMenu = [
-          ...publicMenuData.filter((item) => item.path !== "/contact"),
+          ...menuData.filter((item) => item.path !== "/contact"),
           ...userMenuData,
           ...resolvedAdminMenu,
-          ...publicMenuData.filter((item) => item.path === "/contact"),
+          ...menuData.filter((item) => item.path === "/contact"),
         ];
         setMenuItems(authedMenu);
       } else {
         setUser(null);
-        setMenuItems(publicMenuData);
+        setMenuItems(menuData);
       }
     };
     fetchUser();
-  }, [pathname, publicMenuData, tenant?.isDefault]);
+  }, [pathname, tenant?.isDefault]);
 
   useEffect(() => {
     if (!navigationOpen) return;

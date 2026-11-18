@@ -5,11 +5,13 @@ import { ROLE_TYPES } from "../utils/constants.js";
 
 const router = express.Router();
 
-// Public multi-tenant resolution & SaaS onboarding endpoints
+// Public multi-tenant resolution endpoint
 router.get("/resolve", tenantController.resolveCurrentTenant);
-router.get("/plans", tenantController.listPlans);
-router.get("/check-slug/:slug", tenantController.checkSlug);
-router.post("/provision", tenantController.provision);
+
+// Platform Super Admin store creation & provisioning endpoints
+router.get("/plans", requirePlatformAdmin, tenantController.listPlans);
+router.get("/check-slug/:slug", requirePlatformAdmin, tenantController.checkSlug);
+router.post("/provision", requirePlatformAdmin, tenantController.provision);
 
 // Current store owner / admin endpoints
 router.get(
