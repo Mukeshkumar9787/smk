@@ -1,17 +1,15 @@
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import OrderDetails from "@/components/Orders/OrderDetails";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Orders",
-};
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Order Details",
+  "View itemized summary, shipping status, and invoice for your SMK order."
+);
 
-const OrdersPage = async ({params}) => {
-  return (
-    <main>
-      <OrderDetails params={await params} />
-    </main>
-  );
+const OrdersPage = async ({ params }: { params: Promise<{ slug: string }> }) => {
+  return <OrderDetails params={await params} />;
 };
 
 export default OrdersPage;

@@ -96,7 +96,7 @@ export const ORDER_STATUS_COLOR = {
 
 export const PROJECT_DETAILS = {
     name: "SMK",
-    description: "ecommerce platform"
+    description: "Shop curated collections, everyday essentials, and new arrivals at SMK with transparent pricing, real-time stock, and secure online checkout."
 }
 
 

@@ -1,11 +1,9 @@
 import Link from "next/link";
 import ProductItem from "@/components/Common/ProductItem";
-import { getProducts } from "@/http/apiCalls";
-import { STATUS_TYPES } from "@/utils/constants";
+import { fetchActiveProductsServer } from "@/lib/seoServer";
 
 const NewArrival = async () => {
-  const data = await getProducts({pageSize: 8, status: STATUS_TYPES.ACTIVE});
-  const shopData = data.data || [];
+  const { products: shopData } = await fetchActiveProductsServer({ pageSize: 8 }, 120);
   return (
     <section className="overflow-hidden bg-transparent pb-18 pt-10 sm:pt-12">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -35,9 +33,9 @@ const NewArrival = async () => {
               </svg>
               This Week’s
               </span>
-              <h2 className="font-semibold text-2xl tracking-tight text-dark sm:text-3xl xl:text-heading-4">
+              <h1 className="font-semibold text-2xl tracking-tight text-dark sm:text-3xl xl:text-heading-4">
                 New Arrivals
-              </h2>
+              </h1>
               <p className="mt-3 max-w-[540px] text-sm leading-6 text-dark-4 sm:text-base">
                 Fresh products selected for the front page, with updated pricing, availability, and quick access to the full catalog.
               </p>

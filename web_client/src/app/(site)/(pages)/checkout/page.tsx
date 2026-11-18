@@ -1,17 +1,15 @@
 import React from "react";
+import type { Metadata } from "next";
 import Checkout from "@/components/Checkout";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-import { Metadata } from "next";
-export const metadata: Metadata = {
-  title: "Checkout",
-};
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Checkout",
+  "Complete your SMK order securely."
+);
 
 const CheckoutPage = () => {
-  return (
-    <main>
-      <Checkout />
-    </main>
-  );
+  return <Checkout />;
 };
 
 export default CheckoutPage;

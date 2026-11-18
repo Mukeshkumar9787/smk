@@ -1,19 +1,12 @@
-import BlogDetails from "@/components/BlogDetails";
 import React from "react";
+import type { Metadata } from "next";
+import BlogDetails from "@/components/BlogDetails";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-import { Metadata } from "next";
-export const metadata: Metadata = {
-  title: "Blog Details Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Blog Details Page for NextCommerce Template",
-  // other metadata
-};
+export const metadata: Metadata = buildNoIndexMetadata("Blog Article");
 
 const BlogDetailsPage = () => {
-  return (
-    <main>
-      <BlogDetails />
-    </main>
-  );
+  return <BlogDetails />;
 };
 
 export default BlogDetailsPage;

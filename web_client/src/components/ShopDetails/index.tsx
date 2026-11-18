@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import RecentlyViewdItems from "./RecentlyViewd";
 import { addProductReview, deleteMyProductReview, getMyProductReview, getProductBySlug, getProductReviews, updateMyProductReview } from "@/http/apiCalls";
 import { getCurrencyDetails, getOfferPercent, getStoredToken, redirectToSignIn } from "@/utils/helper";
@@ -31,11 +32,11 @@ const renderStars = (rating = 0, size = 18) => {
   );
 };
 
-const ShopDetails = ({ params }) => {
+const ShopDetails = ({ params, initialProduct = null, initialReviews = [] }) => {
   const router = useRouter();
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState(initialProduct);
   const [previewImg, setPreviewImg] = useState(0);
-  const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState(initialReviews);
   const [myReviews, setMyReviews] = useState([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [activeReview, setActiveReview] = useState(null);
@@ -43,6 +44,7 @@ const ShopDetails = ({ params }) => {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const hasHydratedInitialReviews = useRef(Boolean(initialProduct));
 
   const handleNotFound = () => {
     router.replace("/404");
@@ -104,12 +106,19 @@ const ShopDetails = ({ params }) => {
   };
 
   useEffect(() => {
+    if (initialProduct && initialProduct.slug === params?.slug) {
+      return;
+    }
     fetchProduct();
-  }, []);
+  }, [params?.slug]);
 
   useEffect(() => {
     if (!product?.id) return;
-    fetchReviews(product.id);
+    if (hasHydratedInitialReviews.current) {
+      hasHydratedInitialReviews.current = false;
+    } else {
+      fetchReviews(product.id);
+    }
     fetchMyReview(product.id);
   }, [product?.id]);
 
@@ -234,12 +243,37 @@ const ShopDetails = ({ params }) => {
         <>
           <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
             <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+              <nav aria-label="Breadcrumb" className="mb-6 text-sm text-dark-4">
+                <ol className="flex flex-wrap items-center gap-2">
+                  <li>
+                    <Link href="/" className="hover:text-blue transition">
+                      Home
+                    </Link>
+                  </li>
+                  <li aria-hidden="true">/</li>
+                  <li>
+                    <Link href="/shop" className="hover:text-blue transition">
+                      Shop
+                    </Link>
+                  </li>
+                  <li aria-hidden="true">/</li>
+                  <li aria-current="page" className="font-medium text-dark line-clamp-1">
+                    {product.title}
+                  </li>
+                </ol>
+              </nav>
+
               <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
                 <div className="lg:max-w-[570px] w-full">
                   <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
                     <div>
                       {product.images[previewImg] && (
-                        <img src={product.images[previewImg]} alt="products-details" width={400} height={400} />
+                        <img
+                          src={product.images[previewImg]}
+                          alt={product.title}
+                          width={400}
+                          height={400}
+                        />
                       )}
                     </div>
                   </div>
@@ -247,11 +281,19 @@ const ShopDetails = ({ params }) => {
                   <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
                     {product.images.map((item, key) => (
                       <button
+                        type="button"
                         onClick={() => setPreviewImg(key)}
                         key={key}
+                        aria-label={`View ${product.title} image ${key + 1}`}
                         className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${key === previewImg ? "border-blue" : "border-transparent"}`}
                       >
-                        <img width={50} height={50} src={item} alt="thumbnail" />
+                        <img
+                          width={50}
+                          height={50}
+                          src={item}
+                          alt={`${product.title} thumbnail ${key + 1}`}
+                          loading="lazy"
+                        />
                       </button>
                     ))}
                   </div>
@@ -259,7 +301,7 @@ const ShopDetails = ({ params }) => {
 
                 <div className="max-w-[539px] w-full">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">{product.title}</h2>
+                    <h1 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">{product.title}</h1>
                     <div className="flex items-center gap-2">
                       <div className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5">
                         {getOfferPercent(product.mrp, product.price)}% OFF

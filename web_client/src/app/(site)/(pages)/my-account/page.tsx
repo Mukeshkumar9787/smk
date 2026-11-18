@@ -1,21 +1,15 @@
-import MyAccount from "@/components/MyAccount";
 import React from "react";
+import type { Metadata } from "next";
+import MyAccount from "@/components/MyAccount";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-import { Metadata } from "next";
-import { PROJECT_DETAILS } from "@/utils/constants";
-
-export const metadata: Metadata = {
-  title: `My Account | ${PROJECT_DETAILS.name}`,
-  description:
-    "View and update your SMK profile, addresses, and recent orders from one secure hub.",
-};
+export const metadata: Metadata = buildNoIndexMetadata(
+  "My Account",
+  "View and update your SMK profile, addresses, and recent orders."
+);
 
 const MyAccountPage = () => {
-  return (
-    <main>
-      <MyAccount />
-    </main>
-  );
+  return <MyAccount />;
 };
 
 export default MyAccountPage;

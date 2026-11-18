@@ -1,13 +1,18 @@
 import React from "react";
 import Categories from "./Categories";
 import NewArrival from "./NewArrivals";
+import type { SeoCategoryData } from "@/lib/seoServer";
 
-const Home = () => {
+interface HomeProps {
+  initialCategories?: SeoCategoryData[];
+}
+
+const Home = ({ initialCategories = [] }: HomeProps) => {
   return (
-    <main className="overflow-hidden bg-transparent">
+    <div className="overflow-hidden bg-transparent">
       <NewArrival />
-      <Categories />
-    </main>
+      <Categories initialCategories={initialCategories} />
+    </div>
   );
 };
 

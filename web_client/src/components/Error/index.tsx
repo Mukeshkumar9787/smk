@@ -17,9 +17,9 @@ const Error = () => {
                 height={190}
               />
 
-              <h2 className="font-medium text-dark text-xl sm:text-2xl mb-3">
+              <h1 className="font-medium text-dark text-xl sm:text-2xl mb-3">
                 Sorry, the page can’t be found
-              </h2>
+              </h1>
 
               <p className="max-w-[410px] w-full mx-auto mb-7.5">
                 The page you were looking for appears to have been moved,

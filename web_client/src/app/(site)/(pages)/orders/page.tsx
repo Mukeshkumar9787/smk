@@ -1,11 +1,12 @@
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import OrdersHub from "@/components/Orders/OrdersHub";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Orders | SMK Store",
-  description: "Track your orders, view delivery milestones, and inspect invoices.",
-};
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Orders",
+  "Track your SMK orders, view delivery milestones, and inspect invoices."
+);
 
 const OrdersPage = () => {
   return <OrdersHub />;

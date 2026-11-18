@@ -3,8 +3,8 @@ import React from "react";
 import { getConfig } from "@/http/apiCalls";
 import { CONFIG_KEYS } from "@/utils/constants";
 
-const Contact = () => {
-  const [compInfo, setCompInfo] = React.useState({});
+const Contact = ({ initialCompInfo = null }: { initialCompInfo?: Record<string, any> | null } = {}) => {
+  const [compInfo, setCompInfo] = React.useState(initialCompInfo || {});
 
   const fetchConfig = React.useCallback(async () => {
     try {
@@ -18,8 +18,9 @@ const Contact = () => {
   }, []);
 
   React.useEffect(() => {
+    if (initialCompInfo && Object.keys(initialCompInfo).length > 0) return;
     fetchConfig();
-  }, [fetchConfig]);
+  }, [fetchConfig, initialCompInfo]);
 
   const contactCards = [
     {

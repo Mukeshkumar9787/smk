@@ -1,17 +1,12 @@
 import React from "react";
-
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import Color from "@/components/Color";
-export const metadata: Metadata = {
-  title: "Color List",
+import { buildNoIndexMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildNoIndexMetadata("Colors Management");
+
+const ColorPage = () => {
+  return <Color />;
 };
 
-const SizePage = () => {
-  return (
-    <>
-      <Color />
-    </>
-  );
-};
-
-export default SizePage;
+export default ColorPage;

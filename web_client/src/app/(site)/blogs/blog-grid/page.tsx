@@ -1,19 +1,12 @@
 import React from "react";
+import type { Metadata } from "next";
 import BlogGrid from "@/components/BlogGrid";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-import { Metadata } from "next";
-export const metadata: Metadata = {
-  title: "Blog Grid Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Blog Grid Page for NextCommerce Template",
-  // other metadata
-};
+export const metadata: Metadata = buildNoIndexMetadata("Blog");
 
 const BlogGridPage = () => {
-  return (
-    <main>
-      <BlogGrid />
-    </main>
-  );
+  return <BlogGrid />;
 };
 
 export default BlogGridPage;

@@ -1,16 +1,12 @@
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import SizeForm from "@/components/Size/Form";
-export const metadata: Metadata = {
-  title: "Size",
-};
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-const NewPage = async ({params}) => {
-  return (
-    <>
-      <SizeForm params={ await params} />
-    </>
-  );
+export const metadata: Metadata = buildNoIndexMetadata("Manage Size");
+
+const NewPage = async ({ params }: { params: Promise<{ slug: string }> }) => {
+  return <SizeForm params={await params} />;
 };
 
 export default NewPage;

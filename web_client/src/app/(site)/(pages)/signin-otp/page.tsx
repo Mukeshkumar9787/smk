@@ -1,17 +1,15 @@
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import SigninOtp from "@/components/Auth/SignInOtp";
-export const metadata: Metadata = {
-  title: "SigninOtp",
-  // other metadata
-};
+import { buildNoIndexMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Sign In with OTP",
+  "Verify your one-time passcode to access your SMK account."
+);
 
 const SigninOtpPage = () => {
-  return (
-    <main>
-      <SigninOtp />
-    </main>
-  );
+  return <SigninOtp />;
 };
 
 export default SigninOtpPage;

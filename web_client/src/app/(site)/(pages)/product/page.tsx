@@ -1,17 +1,12 @@
 import React from "react";
+import type { Metadata } from "next";
 import Product from "@/components/Product";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-import { Metadata } from "next";
-export const metadata: Metadata = {
-  title: "Product List",
-};
+export const metadata: Metadata = buildNoIndexMetadata("Products Management");
 
 const ProductList = () => {
-  return (
-    <>
-      <Product />
-    </>
-  );
+  return <Product />;
 };
 
 export default ProductList;

@@ -1,19 +1,15 @@
 import React from "react";
+import type { Metadata } from "next";
 import MailSuccess from "@/components/MailSuccess";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-import { Metadata } from "next";
-export const metadata: Metadata = {
-  title: "Mail Success Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Mail Success Page for NextCommerce Template",
-  // other metadata
-};
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Message Sent",
+  "Your message has been sent to the SMK team."
+);
 
 const MailSuccessPage = () => {
-  return (
-    <main>
-      <MailSuccess />
-    </main>
-  );
+  return <MailSuccess />;
 };
 
 export default MailSuccessPage;

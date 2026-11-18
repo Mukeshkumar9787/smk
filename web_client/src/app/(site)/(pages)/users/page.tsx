@@ -1,16 +1,12 @@
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import Users from "@/components/Users";
-export const metadata: Metadata = {
-  title: "Users List",
-};
+import { buildNoIndexMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildNoIndexMetadata("Users Management");
 
 const UsersList = () => {
-  return (
-    <>
-      <Users />
-    </>
-  );
+  return <Users />;
 };
 
 export default UsersList;

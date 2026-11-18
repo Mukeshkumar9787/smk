@@ -1,17 +1,15 @@
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import ResetPassword from "@/components/Auth/ResetPassword";
-export const metadata: Metadata = {
-  title: "Reset Password",
-  // other metadata
+import { buildNoIndexMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Reset Password",
+  "Reset your SMK account password securely."
+);
+
+const ResetPasswordPage = () => {
+  return <ResetPassword />;
 };
 
-const SigninOtpPage = () => {
-  return (
-    <main>
-      <ResetPassword />
-    </main>
-  );
-};
-
-export default SigninOtpPage;
+export default ResetPasswordPage;

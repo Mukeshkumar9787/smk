@@ -2,24 +2,37 @@
 
 import { getCategories } from "@/http/apiCalls";
 import { STATUS_TYPES } from "@/utils/constants";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const CategoryDropdown = ({ setCategoryFilter }) => {
-  const [categories, setCategories] = useState([]);
+const CategoryDropdown = ({
+  setCategoryFilter,
+  initialCategories = [],
+  onSelect,
+}: {
+  setCategoryFilter?: (slug: string) => void;
+  initialCategories?: any[];
+  onSelect?: () => void;
+}) => {
+  const [categories, setCategories] = useState(initialCategories);
   const [toggleDropdown, setToggleDropdown] = useState(true);
 
   useEffect(() => {
-      const fetchCategories = async () => {
-        try {
-          const data = await getCategories({status: STATUS_TYPES.ACTIVE, includeProductCount: true});
-          setCategories(data?.data || []);
-        } catch (err) {
-          console.error(err);
-        }
-      };
-  
-      fetchCategories();
-    }, []);
+    if (initialCategories.length > 0) return;
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories({
+          status: STATUS_TYPES.ACTIVE,
+          includeProductCount: true,
+        });
+        setCategories(data?.data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchCategories();
+  }, [initialCategories.length]);
 
   return (
     <div className="bg-white shadow-1 rounded-lg">
@@ -34,7 +47,8 @@ const CategoryDropdown = ({ setCategoryFilter }) => {
       >
         <p className="text-dark">Category</p>
         <button
-          aria-label="button for category dropdown"
+          type="button"
+          aria-label="Toggle category filter list"
           className={`text-dark ease-out duration-200 ${
             toggleDropdown && "rotate-180"
           }`}
@@ -57,7 +71,6 @@ const CategoryDropdown = ({ setCategoryFilter }) => {
         </button>
       </div>
 
-      {/* dropdown && 'shadow-filter */}
       {/* <!-- dropdown menu --> */}
       <div
         className={`flex-col gap-3 py-6 pl-6 pr-5.5 ${
@@ -65,20 +78,23 @@ const CategoryDropdown = ({ setCategoryFilter }) => {
         }`}
       >
         {categories.map((category) => (
-          <button
-            className={`group flex items-center justify-between ease-out duration-200 hover:text-blue `}
-            onClick={()=>setCategoryFilter(category.slug)}
+          <Link
+            key={category.id || category.slug}
+            href={`/shop?category=${encodeURIComponent(category.slug)}`}
+            onClick={() => {
+              if (onSelect) onSelect();
+              else if (setCategoryFilter) setCategoryFilter(category.slug);
+            }}
+            className="group flex items-center justify-between ease-out duration-200 hover:text-blue"
           >
             <div className="flex items-center gap-2">
               <span>{category.title}</span>
             </div>
 
-            <span
-              className={`bg-gray-2 inline-flex rounded-[30px] text-custom-xs px-2 ease-out duration-200 group-hover:text-white group-hover:bg-blue`}
-            >
+            <span className="bg-gray-2 inline-flex rounded-[30px] text-custom-xs px-2 ease-out duration-200 group-hover:text-white group-hover:bg-blue">
               {category.productCount}
             </span>
-          </button>
+          </Link>
         ))}
       </div>
     </div>

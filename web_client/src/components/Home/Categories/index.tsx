@@ -8,19 +8,10 @@ import "swiper/css";
 import SingleItem from "./SingleItem";
 import { getCategories } from "@/http/apiCalls";
 import { STATUS_TYPES } from "@/utils/constants";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
-const Categories = () => {
-  const [data, setData] = useState([]);
+const Categories = ({ initialCategories = [] }: { initialCategories?: any[] }) => {
+  const [data, setData] = useState(initialCategories);
   const sliderRef = useRef(null);
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const params = new URLSearchParams(searchParams.toString());
-
-  const setCategoryFilter = (category: string) => {
-    params.set('category', category.toString());
-    router.push(`/shop?${params.toString()}`);
-  };
 
   const handlePrev = useCallback(() => {
     if (!sliderRef.current) return;
@@ -39,17 +30,18 @@ const Categories = () => {
   }, []);
 
   useEffect(() => {
+      if (initialCategories.length > 0) return;
       const fetchCategories = async () => {
         try {
-          const data = await getCategories({status: STATUS_TYPES.ACTIVE});
-          setData(data?.data || []);
+          const response = await getCategories({status: STATUS_TYPES.ACTIVE});
+          setData(response?.data || []);
         } catch (err) {
           console.error(err);
         }
       };
   
       fetchCategories();
-  }, []);
+  }, [initialCategories.length]);
 
   return (
     <section className="overflow-hidden bg-transparent pb-14 pt-10 sm:pt-12 lg:pt-16">
@@ -105,6 +97,8 @@ const Categories = () => {
 
             <div className="ml-auto flex items-center gap-3 self-end lg:self-auto">
               <button
+                type="button"
+                aria-label="Previous categories"
                 onClick={handlePrev}
                 className="!static !mt-0 flex items-center justify-center rounded-full border border-slate-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
                 style={{ width: 32, height: 32, minWidth: 32 }}
@@ -127,6 +121,8 @@ const Categories = () => {
               </button>
 
               <button
+                type="button"
+                aria-label="Next categories"
                 onClick={handleNext}
                 className="!static !mt-0 flex items-center justify-center rounded-full border border-slate-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
                 style={{ width: 32, height: 32, minWidth: 32 }}
@@ -171,8 +167,11 @@ const Categories = () => {
               }}
             >
               {data.map((item, key) => (
-                <SwiperSlide key={key}>
-                  <SingleItem item={item} onClick={()=>{setCategoryFilter(item.slug)}} />
+                <SwiperSlide key={item.id || item.slug || key}>
+                  <SingleItem
+                    item={item}
+                    href={`/shop?category=${encodeURIComponent(item.slug)}`}
+                  />
                 </SwiperSlide>
               ))}
             </Swiper>

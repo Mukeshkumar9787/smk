@@ -1,19 +1,15 @@
 import React from "react";
+import type { Metadata } from "next";
 import { Wishlist } from "@/components/Wishlist";
-import { Metadata } from "next";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Wishlist Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Wishlist Page for NextCommerce Template",
-  // other metadata
-};
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Wishlist",
+  "View and manage your saved favorite products on SMK."
+);
 
 const WishlistPage = () => {
-  return (
-    <main>
-      <Wishlist />
-    </main>
-  );
+  return <Wishlist />;
 };
 
 export default WishlistPage;

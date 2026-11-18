@@ -1,17 +1,12 @@
 import React from "react";
-
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import Size from "@/components/Size";
-export const metadata: Metadata = {
-  title: "Size List",
-};
+import { buildNoIndexMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildNoIndexMetadata("Sizes Management");
 
 const SizePage = () => {
-  return (
-    <>
-      <Size />
-    </>
-  );
+  return <Size />;
 };
 
 export default SizePage;

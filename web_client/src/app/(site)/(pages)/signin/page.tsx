@@ -1,17 +1,15 @@
-import Signin from "@/components/Auth/Signin";
 import React from "react";
-import { Metadata } from "next";
-export const metadata: Metadata = {
-  title: "Signin",
-  // other metadata
-};
+import type { Metadata } from "next";
+import Signin from "@/components/Auth/Signin";
+import { buildNoIndexMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Sign In",
+  "Sign in to your SMK account to track orders and manage your wishlist."
+);
 
 const SigninPage = () => {
-  return (
-    <main>
-      <Signin />
-    </main>
-  );
+  return <Signin />;
 };
 
 export default SigninPage;

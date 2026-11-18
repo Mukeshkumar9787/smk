@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import CategoryDropdown from "./CategoryDropdown";
 import SizeDropdown from "./SizeDropdown";
 import ColorsDropdwon from "./ColorsDropdown";
@@ -13,29 +14,44 @@ import { FilterOutlined } from "@ant-design/icons";
 import ProductItem from "../Common/ProductItem";
 
 
-const ShopWithSidebar = () => {
+const ShopWithSidebar = ({
+  initialProducts = [],
+  initialTotalCount = 0,
+  initialCategories = [],
+  initialFetched = false,
+  activeCategoryTitle = "",
+}: {
+  initialProducts?: any[];
+  initialTotalCount?: number;
+  initialCategories?: any[];
+  initialFetched?: boolean;
+  activeCategoryTitle?: string;
+} = {}) => {
   const [productSidebar, setProductSidebar] = useState(false);
-  const [productItems, setProductItems] = React.useState([]);
-  const [totalCount, setTotalCount] = React.useState(0);
+  const [productItems, setProductItems] = React.useState(initialProducts);
+  const [totalCount, setTotalCount] = React.useState(initialTotalCount);
   const [pagination, setPagination] = React.useState({ pageNumber: 1, pageSize: 6});
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
   const params = new URLSearchParams(searchParams.toString());
-  const activeFilterCount = ["category", "size", "color"].filter((key) => params.get(key)).length;
-  
+  const activeFilterCount = ["category", "size", "color", "search"].filter((key) => params.get(key)).length;
+  const skipInitialFetchRef = useRef(initialFetched);
+
   const fetchProducts = useCallback(async () => {
     try {
-      const params = new URLSearchParams(searchParams.toString());
-      const category = params.get('category');
-      const size = params.get('size');
-      const color = params.get('color');
+      const currentParams = new URLSearchParams(searchParams.toString());
+      const category = currentParams.get('category');
+      const size = currentParams.get('size');
+      const color = currentParams.get('color');
+      const search = currentParams.get('search');
 
       const data = await getProducts({
         ...pagination,
         category,
         size,
         color,
+        search,
         status: STATUS_TYPES.ACTIVE
       });
 
@@ -47,6 +63,10 @@ const ShopWithSidebar = () => {
   }, [pagination, searchParams]);
 
   React.useEffect(() => {
+    if (skipInitialFetchRef.current) {
+      skipInitialFetchRef.current = false;
+      return;
+    }
     fetchProducts();
   }, [fetchProducts]);
 
@@ -89,6 +109,35 @@ const ShopWithSidebar = () => {
     <>
       <section className="overflow-hidden relative bg-transparent pb-20 pt-5">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          <div className="mb-5 flex flex-col gap-1.5">
+            <nav aria-label="Breadcrumb" className="text-sm text-dark-4">
+              <ol className="flex flex-wrap items-center gap-2">
+                <li>
+                  <Link href="/" className="hover:text-blue transition">
+                    Home
+                  </Link>
+                </li>
+                <li aria-hidden="true">/</li>
+                <li>
+                  <Link href="/shop" className="hover:text-blue transition">
+                    Shop
+                  </Link>
+                </li>
+                {activeCategoryTitle && (
+                  <>
+                    <li aria-hidden="true">/</li>
+                    <li aria-current="page" className="font-medium text-dark">
+                      {activeCategoryTitle}
+                    </li>
+                  </>
+                )}
+              </ol>
+            </nav>
+            <h1 className="font-semibold text-2xl tracking-tight text-dark sm:text-3xl">
+              {activeCategoryTitle || "Shop All Products"}
+            </h1>
+          </div>
+
           <div className="relative mb-5 xl:hidden">
             <div className="rounded-[24px] border border-slate-200/80 bg-white/95 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.08)] backdrop-blur">
               <div className="flex items-center gap-3">
@@ -193,7 +242,11 @@ const ShopWithSidebar = () => {
                   
 
                   {/* <!-- category box --> */}
-                  <CategoryDropdown setCategoryFilter={setCategoryFilter} />
+                  <CategoryDropdown
+                    setCategoryFilter={setCategoryFilter}
+                    initialCategories={initialCategories}
+                    onSelect={() => setProductSidebar(false)}
+                  />
 
                   {/* // <!-- size box --> */}
                   <SizeDropdown setSizeFilter={setSizeFilter} />
