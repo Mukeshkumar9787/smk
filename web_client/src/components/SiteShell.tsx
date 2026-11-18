@@ -28,7 +28,7 @@ import ButtonLoaderManager from "@/components/Common/ButtonLoaderManager";
 import { DEFAULT_TENANT, type PublicTenant } from "@/lib/theme";
 
 function SiteShellInner({ children }: { children: React.ReactNode }) {
-  const { branding, tenant } = useTenant();
+  const { branding } = useTenant();
   // Keep initial SSR/hydration paint unblocked for fast LCP and crawler visibility
   const [showLoader, setShowLoader] = useState<boolean>(false);
   const [pageLoading, setPageLoading] = useState(false);
@@ -160,22 +160,6 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
       }}
     >
       {showLoader && <LoaderOverlay message={"Loading..."} />}
-      {!tenant.isDefault && (
-        <div
-          className="w-full px-4 py-1.5 text-center text-xs font-medium text-white"
-          style={{ backgroundColor: branding.primaryDarkColor || branding.primaryColor }}
-        >
-          <span>
-            Viewing store <strong>{branding.storeName}</strong> (<code>/s/{tenant.slug}</code>)
-          </span>
-          <a
-            href="/?tenant=smk"
-            className="ml-3 inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white transition hover:bg-white/30"
-          >
-            Switch to Main Platform
-          </a>
-        </div>
-      )}
       <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
         <ReduxProvider>
           <CartSync />

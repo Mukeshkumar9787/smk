@@ -11,6 +11,9 @@ import { globalRateLimiter } from "./middlewares/rateLimitMiddleware.js";
 
 const app = express();
 
+// Trust first proxy (Render / Vercel edge) so rate limiting tracks client IPs accurately
+app.set("trust proxy", 1);
+
 // Adds secure HTTP headers
 app.use(helmet());
 
