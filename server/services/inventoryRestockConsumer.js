@@ -9,6 +9,7 @@
 import { getKafkaConfig } from "../utils/kafkaConfig.js";
 import productService from "./products.js";
 import { isInventoryAgentEnabled } from "./inventoryAgentProducer.js";
+import { DEFAULT_TENANT_ID, DEFAULT_TENANT_SLUG, runWithTenant } from "../utils/tenantContext.js";
 
 let consumerInstance = null;
 let isStarting = false;
@@ -88,13 +89,19 @@ export const startRestockConsumer = async () => {
             return;
           }
 
-          // Execute stock replenishment in store database
-          const result = await productService.restockProduct({
-            slug,
-            productId,
-            quantity,
-            poNumber,
-          });
+          // Execute stock replenishment inside tenant context (defaults to SMK for legacy events)
+          const targetTenant = {
+            id: event.tenantId || event.tenant_id || DEFAULT_TENANT_ID,
+            slug: event.tenantSlug || event.tenant_slug || DEFAULT_TENANT_SLUG,
+          };
+          const result = await runWithTenant(targetTenant, () =>
+            productService.restockProduct({
+              slug,
+              productId,
+              quantity,
+              poNumber,
+            })
+          );
 
           console.log(
             `[RestockConsumer] ✅ Stock replenished via Kafka: "${result.title}" (ID: ${result.productId}) +${result.addedQuantity} units. New stock: ${result.currentStock} (PO: ${result.poNumber || "N/A"})`

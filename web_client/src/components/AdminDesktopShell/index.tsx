@@ -6,15 +6,30 @@ import { usePathname } from "next/navigation";
 import { adminMenuData } from "@/components/Header/menuData";
 import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { ROLE_TYPES } from "@/utils/constants";
+import { PLATFORM_ADMIN_URL } from "@/utils/appUrls";
 
 const adminLinks = adminMenuData.flatMap((item) => item.submenu || []);
 
 const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const isAdminPage = adminLinks.some((item) =>
-    item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false
+  const [isPlatformAdmin, setIsPlatformAdmin] = React.useState(false);
+  const allLinks = React.useMemo(
+    () =>
+      isPlatformAdmin
+        ? [
+            { title: "Super Admin", newTab: false, path: PLATFORM_ADMIN_URL },
+            ...adminLinks,
+          ]
+        : adminLinks,
+    [isPlatformAdmin]
   );
+  const isAdminPage =
+    pathname === PLATFORM_ADMIN_URL ||
+    pathname.startsWith(`${PLATFORM_ADMIN_URL}/`) ||
+    adminLinks.some((item) =>
+      item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false
+    );
 
   React.useEffect(() => {
     const loadUser = async () => {
@@ -22,6 +37,7 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
 
       const user = await getLoggedInUserData();
       setIsAdmin(user?.role === ROLE_TYPES.ADMIN);
+      setIsPlatformAdmin(Boolean(user?.isPlatformAdmin));
     };
 
     loadUser();
@@ -39,7 +55,7 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
             Admin Manage
           </p>
           <nav className="mt-5 space-y-2">
-            {adminLinks.map((item) => {
+            {allLinks.map((item) => {
               const isActive = item.path
                 ? pathname === item.path || pathname.startsWith(`${item.path}/`)
                 : false;
@@ -50,7 +66,7 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
                   href={item.path || "/"}
                   className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${
                     isActive
-                      ? "bg-[linear-gradient(135deg,#0f766e_0%,#0ea5e9_100%)] text-white shadow-lg"
+                      ? "bg-blue text-white shadow-lg"
                       : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
                   }`}
                 >

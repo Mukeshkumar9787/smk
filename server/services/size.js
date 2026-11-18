@@ -35,7 +35,7 @@ const getSizes = async ({ status }) => {
  * Get single Size
  */
 const getSizeBySlug = async (title) => {
-  const Size = await prisma.size.findUnique({
+  const Size = await prisma.size.findFirst({
     select: {
       id: true,
       title: true,

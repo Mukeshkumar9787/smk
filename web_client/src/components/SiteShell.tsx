@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
+import { ConfigProvider } from "antd";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AdminDesktopShell from "@/components/AdminDesktopShell";
 import { ModalProvider } from "@/app/context/QuickViewModalContext";
 import { CartModalProvider } from "@/app/context/CartSidebarModalContext";
 import { WishlistModalProvider } from "@/app/context/WishlistSidebarModalContext";
+import { TenantProvider, useTenant } from "@/app/context/TenantContext";
 import { ReduxProvider } from "@/redux/provider";
 import QuickViewModal from "@/components/Common/QuickViewModal";
 import CartSidebarModal from "@/components/Common/CartSidebarModal";
@@ -23,8 +25,10 @@ import ServerOfflineBanner from "@/components/Common/ServerOfflineBanner";
 import RateLimitBanner from "@/components/Common/RateLimitBanner";
 import ChatbotAssistant from "@/components/Common/ChatbotAssistant";
 import ButtonLoaderManager from "@/components/Common/ButtonLoaderManager";
+import { DEFAULT_TENANT, type PublicTenant } from "@/lib/theme";
 
-export default function SiteShell({ children }: { children: React.ReactNode }) {
+function SiteShellInner({ children }: { children: React.ReactNode }) {
+  const { branding, tenant } = useTenant();
   // Keep initial SSR/hydration paint unblocked for fast LCP and crawler visibility
   const [showLoader, setShowLoader] = useState<boolean>(false);
   const [pageLoading, setPageLoading] = useState(false);
@@ -40,7 +44,6 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Listen for clicks on navigation links to trigger global loader on client navigation
   useEffect(() => {
     const handleLinkClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
@@ -84,7 +87,6 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Trigger global loader when pathname changes (route transition)
   useEffect(() => {
     if (!hasNavigatedRef.current) {
       hasNavigatedRef.current = true;
@@ -114,7 +116,6 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
-  // Hide global loader once route transition & pending GET requests settle
   useEffect(() => {
     if (!isPageLoadingRef.current) {
       return;
@@ -150,8 +151,31 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: branding.primaryColor || "#3C50E0",
+          borderRadius: 12,
+        },
+      }}
+    >
       {showLoader && <LoaderOverlay message={"Loading..."} />}
+      {!tenant.isDefault && (
+        <div
+          className="w-full px-4 py-1.5 text-center text-xs font-medium text-white"
+          style={{ backgroundColor: branding.primaryDarkColor || branding.primaryColor }}
+        >
+          <span>
+            Viewing store <strong>{branding.storeName}</strong> (<code>/s/{tenant.slug}</code>)
+          </span>
+          <a
+            href="/?tenant=smk"
+            className="ml-3 inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white transition hover:bg-white/30"
+          >
+            Switch to Main Platform
+          </a>
+        </div>
+      )}
       <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
         <ReduxProvider>
           <CartSync />
@@ -183,6 +207,20 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <Footer />
       <ChatbotAssistant />
       <ButtonLoaderManager />
-    </>
+    </ConfigProvider>
+  );
+}
+
+export default function SiteShell({
+  children,
+  initialTenant = DEFAULT_TENANT,
+}: {
+  children: React.ReactNode;
+  initialTenant?: PublicTenant;
+}) {
+  return (
+    <TenantProvider initialTenant={initialTenant}>
+      <SiteShellInner>{children}</SiteShellInner>
+    </TenantProvider>
   );
 }

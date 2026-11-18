@@ -1,13 +1,33 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import prisma from "../prisma/client.js";
+import prisma, { rawPrisma } from "../prisma/client.js";
 import { generateSecureOTP, hashedPassword, hashOTP } from "../utils/cryptoUtils.js";
 import { sendMail } from "../utils/mailUtils.js";
-import { FEATURE_TYPES, OTP_TYPES } from "../utils/constants.js";
+import { FEATURE_TYPES, OTP_TYPES, TENANT_ROLES } from "../utils/constants.js";
 import { getAppName, isOtpExpired } from "../utils/helpers.js";
+import { getCurrentTenantId } from "../utils/tenantContext.js";
 import { OAuth2Client } from 'google-auth-library';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+async function ensureTenantMembership(userId, role = TENANT_ROLES.CUSTOMER) {
+  const tenantId = getCurrentTenantId();
+  if (!tenantId || !userId) return;
+  await rawPrisma.tenantMembership.upsert({
+    where: {
+      tenantId_userId: {
+        tenantId,
+        userId,
+      },
+    },
+    create: {
+      tenantId,
+      userId,
+      role,
+    },
+    update: {},
+  });
+}
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -143,6 +163,7 @@ const login = async ({ email, password }) => {
     throw err;
   }
 
+  await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
   const token = generateToken(user);
 
   return {
@@ -199,6 +220,7 @@ const verifyOTP = async ({ email, otp, type }) => {
 
   if(type === OTP_TYPES.REGISTER){
     const user = await prisma.user.create({ data: {...otpRecord.meta, email} });
+    await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
     const token = generateToken(user);
     return {
       id: user.id,
@@ -209,6 +231,7 @@ const verifyOTP = async ({ email, otp, type }) => {
   }
   if(type === OTP_TYPES.LOGIN){
     const user = await prisma.user.findUnique({ where: { email } });
+    await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
     const token = generateToken(user);
     return {
       id: user.id,
@@ -278,6 +301,7 @@ async function verifyGoogleToken(token) {
     }
   }
 
+  await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
   const jwtToken = generateToken(user);
 
   return {

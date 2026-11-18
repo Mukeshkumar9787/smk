@@ -1,6 +1,7 @@
 import prisma, { PrismaConfig } from "../prisma/client.js";
 import { convertToFullFilePath } from "../utils/helpers.js";
 import { getDirectUploadConfig, isR2Configured, uploadFileToR2 } from "../utils/r2.js";
+import { getCurrentTenantId } from "../utils/tenantContext.js";
 
 /**
  * Create File
@@ -59,7 +60,8 @@ const updateFilesByIds = async ({ tx=prisma, feature, featureId, fileIds=[], del
   let deleteFilesPromise = [];
 
   if(deletedFileIds.length > 0){
-      let condition = PrismaConfig.sql`id in (${PrismaConfig.join(deletedFileIds,`,`)})`
+      const tenantId = getCurrentTenantId();
+      let condition = PrismaConfig.sql`id in (${PrismaConfig.join(deletedFileIds,`,`)}) AND "tenantId" = ${tenantId}`
       deleteFilesPromise = await prisma.$queryRaw`
       DELETE FROM "File"
       WHERE ${condition}

@@ -2,6 +2,7 @@ import prisma, { PrismaConfig } from "../prisma/client.js";
 
 import { FEATURE_TYPES } from "../utils/constants.js";
 import { convertToFullFilePath, deleteFiles, slugText } from "../utils/helpers.js";
+import { getCurrentTenantId } from "../utils/tenantContext.js";
 import { fileService } from "./index.js";
 
 const getCategoryFileIds = async ({ tx = prisma, categoryId }) => {
@@ -48,7 +49,8 @@ const createCategory = async ({ title, fileIds = [], status, deletedFileIds = []
  * Get all categories
  */
 const getCategories = async ({ status, includeProductCount = false }) => {
-  const conditions = [];
+  const tenantId = getCurrentTenantId();
+  const conditions = [PrismaConfig.sql`c."tenantId" = ${tenantId}`];
 
   if (status) {
     conditions.push(PrismaConfig.sql`c.status = ${status}`);
@@ -56,12 +58,12 @@ const getCategories = async ({ status, includeProductCount = false }) => {
 
   const whereClause =
     conditions.length
-      ? PrismaConfig.sql`WHERE ${PrismaConfig.join(conditions, PrismaConfig.sql` AND `)}`
+      ? PrismaConfig.sql`WHERE ${PrismaConfig.join(conditions, " AND ")}`
       : PrismaConfig.empty;
 
   let includeProductCountClause = PrismaConfig.empty;
   if(includeProductCount){
-    includeProductCountClause = PrismaConfig.sql`,(SELECT COUNT(1)::TEXT FROM "Product" p where p."categoryId" = c.id) as "productCount"`
+    includeProductCountClause = PrismaConfig.sql`,(SELECT COUNT(1)::TEXT FROM "Product" p where p."categoryId" = c.id AND p."tenantId" = ${tenantId}) as "productCount"`
   };
 
   const categories = await prisma.$queryRaw`
@@ -73,7 +75,7 @@ const getCategories = async ({ status, includeProductCount = false }) => {
       (
         SELECT f.path
         FROM "File" f
-        WHERE f."featureId" = c.id AND f."feature" = ${FEATURE_TYPES.CATEGORY}
+        WHERE f."featureId" = c.id AND f."feature" = ${FEATURE_TYPES.CATEGORY} AND f."tenantId" = ${tenantId}
         ORDER BY f."createdAt" ASC
         LIMIT 1
       ) AS img
@@ -95,6 +97,7 @@ const getCategories = async ({ status, includeProductCount = false }) => {
  * Get single category
  */
 const getCategoryBySlug = async (slug) => {
+  const tenantId = getCurrentTenantId();
   const categories = await prisma.$queryRaw`
     select
       c.id,
@@ -104,19 +107,19 @@ const getCategoryBySlug = async (slug) => {
       (
         select f.path
         from "File" f
-        where f."featureId" = c.id and f."feature" = ${FEATURE_TYPES.CATEGORY}
+        where f."featureId" = c.id and f."feature" = ${FEATURE_TYPES.CATEGORY} and f."tenantId" = ${tenantId}
         order by f."createdAt" asc
         limit 1
       ) as img,
       (
         select f.id
         from "File" f
-        where f."featureId" = c.id and f."feature" = ${FEATURE_TYPES.CATEGORY}
+        where f."featureId" = c.id and f."feature" = ${FEATURE_TYPES.CATEGORY} and f."tenantId" = ${tenantId}
         order by f."createdAt" asc
         limit 1
       ) as "fileId"
     from "Category" c
-    where c.slug = ${slug}
+    where c.slug = ${slug} and c."tenantId" = ${tenantId}
     order by c."createdAt" desc;
   `;
   if (categories.length === 0) {

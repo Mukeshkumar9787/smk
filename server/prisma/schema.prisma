@@ -33,16 +33,160 @@ enum Feature {
   PRODUCT
 }
 
-model User {
-  id                   Int                  @id @default(autoincrement())
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum TenantRole {
+  STORE_OWNER
+  STORE_STAFF
+  CUSTOMER
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+model Plan {
+  id                     Int            @id @default(autoincrement())
+  code                   String         @unique
+  name                   String
+  description            String?
+  priceMonthly           Int            @default(0)
+  priceYearly            Int            @default(0)
+  currency               String         @default("INR")
+  maxProducts            Int            @default(50)
+  maxStorageMb           Int            @default(500)
+  customDomainAllowed    Boolean        @default(false)
+  aiChatbotEnabled       Boolean        @default(false)
+  autoProcurementEnabled Boolean        @default(false)
+  isActive               Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  tenants                Tenant[]
+  subscriptions          Subscription[]
+}
+
+model Tenant {
+  id                   String                @id @default(cuid())
   name                 String
-  email                String               @unique
+  slug                 String                @unique
+  isDefault            Boolean               @default(false)
+  status               TenantStatus          @default(ACTIVE)
+  customDomain         String?               @unique
+  customDomainVerified Boolean               @default(false)
+  planId               Int?
+  plan                 Plan?                 @relation(fields: [planId], references: [id])
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  branding             TenantBranding?
+  memberships          TenantMembership[]
+  subscriptions        Subscription[]
+  paymentConfig        TenantPaymentConfig?
+  auditLogs            AuditLog[]
+  addresses            Address[]
+  categories           Category[]
+  files                File[]
+  hsns                 Hsn[]
+  products             Product[]
+  productReviews       ProductReview[]
+  cartItems            CartItem[]
+  wishlistItems        WishlistItem[]
+  productNotifications ProductNotification[]
+  sizes                Size[]
+  colors               Color[]
+  otps                 Otp[]
+  orders               Order[]
+  orderProducts        OrderProducts[]
+  stocks               Stock[]
+  orderStatusHistories OrderStatusHistory[]
+  configs              Config[]
+}
+
+model TenantBranding {
+  id               Int      @id @default(autoincrement())
+  tenantId         String   @unique
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  storeName        String
+  tagline          String?
+  logoUrl          String?
+  faviconUrl       String?
+  primaryColor     String   @default("#3C50E0")
+  primaryDarkColor String   @default("#1C3FB7")
+  accentColor      String   @default("#0EA5E9")
+  backgroundColor  String   @default("#F6FAFF")
+  surfaceColor     String   @default("#FFFFFF")
+  textPrimaryColor String   @default("#1C274C")
+  seoTitle         String?
+  seoDescription   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Subscription {
+  id                Int                @id @default(autoincrement())
+  tenantId          String
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId            Int
+  plan              Plan               @relation(fields: [planId], references: [id])
+  provider          String             @default("RAZORPAY")
+  providerSubId     String?            @unique
+  status            SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([tenantId])
+}
+
+model TenantPaymentConfig {
+  id                     Int      @id @default(autoincrement())
+  tenantId               String   @unique
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider               String   @default("RAZORPAY")
+  keyId                  String?
+  encryptedKeySecret     String?
+  encryptedWebhookSecret String?
+  codEnabled             Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model TenantMembership {
+  id        Int        @id @default(autoincrement())
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      TenantRole @default(CUSTOMER)
+  status    Status     @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, role])
+  @@index([userId])
+}
+
+model User {
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  email                String                @unique
   password             String?
   mobile               String?
-  role                 Role                 @default(USER)
-  status               Status               @default(ACTIVE)
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  role                 Role                  @default(USER)
+  isPlatformAdmin      Boolean               @default(false)
+  status               Status                @default(ACTIVE)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  memberships          TenantMembership[]
   orders               Order[]
   addresses            Address[]
   orderStatusHistories OrderStatusHistory[]
@@ -55,6 +199,8 @@ model User {
 
 model AuditLog {
   id         Int      @id @default(autoincrement())
+  tenantId   String   @default("tenant_smk_default")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
   action     String
@@ -68,12 +214,16 @@ model AuditLog {
   meta       Json?
   createdAt  DateTime @default(now())
 
+  @@index([tenantId])
+  @@index([tenantId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
 }
 
 model Address {
   id        Int      @id @default(autoincrement())
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
   name      String
@@ -85,66 +235,91 @@ model Address {
   state     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model Category {
   id        Int       @id @default(autoincrement())
-  title     String    @unique
-  slug      String    @unique
+  tenantId  String    @default("tenant_smk_default")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title     String
+  slug      String
   status    Status    @default(ACTIVE)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
+
+  @@unique([tenantId, title])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
 }
 
 model File {
   id        Int      @id @default(autoincrement())
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   feature   Feature?
   featureId Int?
   path      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model Hsn {
   id        Int       @id @default(autoincrement())
-  code      String    @unique
+  tenantId  String    @default("tenant_smk_default")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code      String
   tax       Int
   status    Status    @default(ACTIVE)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
 }
 
 model Product {
-  id            Int             @id @default(autoincrement())
+  id            Int                   @id @default(autoincrement())
+  tenantId      String                @default("tenant_smk_default")
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   variant       String?
-  title         String          @unique
+  title         String
   description   String?
-  slug          String          @unique
-  category      Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  slug          String
+  category      Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   categoryId    Int
   mrp           Float
   price         Float
-  Hsn           Hsn?            @relation(fields: [hsnId], references: [id], onDelete: Restrict)
+  Hsn           Hsn?                  @relation(fields: [hsnId], references: [id], onDelete: Restrict)
   hsnId         Int?
-  Size          Size?           @relation(fields: [sizeId], references: [id], onDelete: Restrict)
+  Size          Size?                 @relation(fields: [sizeId], references: [id], onDelete: Restrict)
   sizeId        Int?
-  Color         Color?          @relation(fields: [colorId], references: [id], onDelete: Restrict)
+  Color         Color?                @relation(fields: [colorId], references: [id], onDelete: Restrict)
   colorId       Int?
-  status        Status          @default(ACTIVE)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  status        Status                @default(ACTIVE)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
   orderProducts OrderProducts[]
   stocks        Stock[]
   notifications ProductNotification[]
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
   reviews       ProductReview[]
+
+  @@unique([tenantId, title])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
 }
 
 model ProductReview {
   id        Int      @id @default(autoincrement())
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -155,11 +330,14 @@ model ProductReview {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@index([userId, productId])
 }
 
 model CartItem {
   id        Int      @id @default(autoincrement())
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -168,11 +346,14 @@ model CartItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, productId])
+  @@unique([tenantId, userId, productId])
+  @@index([tenantId])
 }
 
 model WishlistItem {
   id        Int      @id @default(autoincrement())
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -180,45 +361,62 @@ model WishlistItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, productId])
+  @@unique([tenantId, userId, productId])
+  @@index([tenantId])
 }
 
 model ProductNotification {
-  id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         Int       @id @default(autoincrement())
+  tenantId   String    @default("tenant_smk_default")
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId  Int
   email      String
-  notified   Boolean  @default(false)
+  notified   Boolean   @default(false)
   notifiedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  @@unique([userId, productId])
+  @@unique([tenantId, userId, productId])
+  @@index([tenantId])
 }
 
 model Size {
   id        Int       @id @default(autoincrement())
-  title     String    @unique
+  tenantId  String    @default("tenant_smk_default")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title     String
   status    Status    @default(ACTIVE)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
+
+  @@unique([tenantId, title])
+  @@index([tenantId])
 }
 
 model Color {
   id        Int       @id @default(autoincrement())
-  title     String    @unique
-  code      String    @unique
+  tenantId  String    @default("tenant_smk_default")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title     String
+  code      String
   status    Status    @default(ACTIVE)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
+
+  @@unique([tenantId, title])
+  @@unique([tenantId, code])
+  @@index([tenantId])
 }
 
 model Otp {
   id         Int       @id @default(autoincrement())
+  tenantId   String    @default("tenant_smk_default")
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type       OTP_Types
   email      String
   otp        String
@@ -226,6 +424,8 @@ model Otp {
   verifiedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
+  @@index([tenantId])
 }
 
 enum OrderStatus {
@@ -246,9 +446,11 @@ enum PaymentType {
 
 model Order {
   id                   Int                  @id @default(autoincrement())
+  tenantId             String               @default("tenant_smk_default")
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user                 User                 @relation(fields: [userId], references: [id])
   userId               Int
-  orderNo              String               @unique
+  orderNo              String
   name                 String
   mobile               String
   address              String
@@ -270,10 +472,15 @@ model Order {
   updatedAt            DateTime             @updatedAt
   orderProducts        OrderProducts[]
   orderStatusHistories OrderStatusHistory[]
+
+  @@unique([tenantId, orderNo])
+  @@index([tenantId])
 }
 
 model OrderProducts {
   id        Int      @id @default(autoincrement())
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   order     Order    @relation(fields: [orderId], references: [id])
   orderId   Int
   product   Product  @relation(fields: [productId], references: [id])
@@ -286,6 +493,8 @@ model OrderProducts {
   stockId   Int      @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 enum StockType {
@@ -297,6 +506,8 @@ enum StockType {
 
 model Stock {
   id            Int            @id @default(autoincrement())
+  tenantId      String         @default("tenant_smk_default")
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type          StockType
   product       Product        @relation(fields: [productId], references: [id])
   productId     Int
@@ -304,10 +515,14 @@ model Stock {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   orderProducts OrderProducts?
+
+  @@index([tenantId])
 }
 
 model OrderStatusHistory {
   id        Int         @id @default(autoincrement())
+  tenantId  String      @default("tenant_smk_default")
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   Int
   user      User        @relation(fields: [userId], references: [id])
@@ -317,12 +532,18 @@ model OrderStatusHistory {
   createdAt DateTime    @default(now())
 
   @@unique([orderId, status])
+  @@index([tenantId])
 }
 
 model Config {
   id        Int      @id @default(autoincrement())
-  key       String   @unique
+  tenantId  String   @default("tenant_smk_default")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String
   value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
 }

@@ -34,7 +34,7 @@ const config: Config = {
         5: "#BBBEC9",
       },
       dark: {
-        DEFAULT: "#1C274C",
+        DEFAULT: "rgb(var(--brand-text-primary) / <alpha-value>)",
         2: "#495270",
         3: "#606882",
         4: "#8D93A5",
@@ -51,13 +51,13 @@ const config: Config = {
         7: "#374151",
       },
       blue: {
-        DEFAULT: "#3C50E0",
-        dark: "#1C3FB7",
-        light: "#5475E5",
+        DEFAULT: "rgb(var(--brand-primary) / <alpha-value>)",
+        dark: "rgb(var(--brand-primary-dark) / <alpha-value>)",
+        light: "rgb(var(--brand-primary-light) / <alpha-value>)",
         "light-2": "#8099EC",
         "light-3": "#ADBCF2",
         "light-4": "#C3CEF6",
-        "light-5": "#E1E8FF",
+        "light-5": "rgb(var(--brand-primary-soft) / <alpha-value>)",
       },
       red: {
         DEFAULT: "#F23030",

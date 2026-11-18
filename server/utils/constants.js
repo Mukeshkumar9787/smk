@@ -15,6 +15,20 @@ export const ROLE_TYPES = {
     ADMIN: 'ADMIN'
 }
 
+export const TENANT_ROLES = {
+    STORE_OWNER: 'STORE_OWNER',
+    STORE_STAFF: 'STORE_STAFF',
+    CUSTOMER: 'CUSTOMER',
+    PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+}
+
+export const TENANT_STATUS = {
+    TRIAL: 'TRIAL',
+    ACTIVE: 'ACTIVE',
+    SUSPENDED: 'SUSPENDED',
+    CANCELLED: 'CANCELLED',
+}
+
 export const OTP_TYPES = {
     LOGIN: 'LOGIN',
     REGISTER: 'REGISTER',

@@ -1,5 +1,6 @@
 import prisma from "../prisma/client.js";
 import { ROLE_TYPES } from "../utils/constants.js";
+import { DEFAULT_TENANT_ID } from "../utils/tenantContext.js";
 
 const AUDITED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const SENSITIVE_KEYS = new Set([
@@ -138,6 +139,7 @@ export const auditLogMiddleware = (req, res, next) => {
     try {
       await prisma.auditLog.create({
         data: {
+          tenantId: req.tenant?.id || DEFAULT_TENANT_ID,
           userId: req.user.id,
           action: getAction(req, entity),
           entity,

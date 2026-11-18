@@ -25,3 +25,6 @@ export const CONFIG_URL = '/config'
 export const CONFIG_COMPANY_URL = `${CONFIG_URL}/company-info`;
 export const CONFIG_SHIPPING_URL = `${CONFIG_URL}/shipping-info`;
 export const CONFIG_COURIER_URL = `${CONFIG_URL}/courier`;
+export const CONFIG_BRANDING_URL = `${CONFIG_URL}/branding`;
+export const LAUNCH_STORE_URL = '/launch';
+export const PLATFORM_ADMIN_URL = '/platform-admin';

@@ -1,6 +1,7 @@
-import prisma, { PrismaConfig } from "../prisma/client.js";
+import prisma, { PrismaConfig, rawPrisma } from "../prisma/client.js";
 import { convertToFullFilePath } from "../utils/helpers.js";
 import { ORDER_STATUS, STOCK_TYPES, STATUS_TYPES } from "../utils/constants.js";
+import { getCurrentTenantId } from "../utils/tenantContext.js";
 import orderService from "./orders.js";
 
 const SALES_STATUSES = [
@@ -39,6 +40,7 @@ const getStockExpression = () => PrismaConfig.sql`
 `;
 
 const getAdminDashboard = async () => {
+  const tenantId = getCurrentTenantId();
   const salesStatusesSql = PrismaConfig.join(
     SALES_STATUSES.map((status) => PrismaConfig.sql`${status}`),
     ", "
@@ -70,7 +72,7 @@ const getAdminDashboard = async () => {
     prisma.order.count(),
     prisma.product.count(),
     prisma.product.count({ where: { status: STATUS_TYPES.ACTIVE } }),
-    prisma.user.count(),
+    rawPrisma.tenantMembership.count({ where: { tenantId } }),
     prisma.$queryRaw`
       SELECT
         COALESCE(SUM(stock_qty), 0)::INT AS "stockUnits",
@@ -81,6 +83,7 @@ const getAdminDashboard = async () => {
           p.id,
           ${getStockExpression()}::INT AS stock_qty
         FROM "Product" p
+        WHERE p."tenantId" = ${tenantId}
       ) stock_summary;
     `,
     prisma.productNotification.count({
@@ -97,7 +100,8 @@ const getAdminDashboard = async () => {
         COALESCE(SUM(o."totalAmount"), 0)::FLOAT AS revenue,
         COUNT(*)::INT AS orders
       FROM "Order" o
-      WHERE o.status IN (${salesStatusesSql})
+      WHERE o."tenantId" = ${tenantId}
+        AND o.status IN (${salesStatusesSql})
         AND o."createdAt" >= DATE_TRUNC('month', NOW()) - INTERVAL '5 months'
       GROUP BY DATE_TRUNC('month', o."createdAt")
       ORDER BY DATE_TRUNC('month', o."createdAt") ASC;
@@ -115,6 +119,7 @@ const getAdminDashboard = async () => {
           SELECT COUNT(1)
           FROM "ProductNotification" pn
           WHERE pn."productId" = p.id
+            AND pn."tenantId" = ${tenantId}
             AND pn.notified = false
         ), 0)::INT AS "restockRequests",
         (
@@ -122,12 +127,14 @@ const getAdminDashboard = async () => {
           FROM "File" f
           WHERE f.feature = 'PRODUCT'
             AND f."featureId" = p.id
+            AND f."tenantId" = ${tenantId}
           ORDER BY f."createdAt" ASC
           LIMIT 1
         ) AS img
       FROM "Product" p
       LEFT JOIN "Category" c ON c.id = p."categoryId"
-      WHERE ${getStockExpression()} <= 5
+      WHERE p."tenantId" = ${tenantId}
+        AND ${getStockExpression()} <= 5
       ORDER BY stock ASC, p."updatedAt" DESC
       LIMIT 6;
     `,
@@ -145,13 +152,15 @@ const getAdminDashboard = async () => {
           FROM "File" f
           WHERE f.feature = 'PRODUCT'
             AND f."featureId" = p.id
+            AND f."tenantId" = ${tenantId}
           ORDER BY f."createdAt" ASC
           LIMIT 1
         ) AS img
       FROM "Product" p
       LEFT JOIN "Category" c ON c.id = p."categoryId"
-      LEFT JOIN "OrderProducts" op ON op."productId" = p.id
-      LEFT JOIN "Order" o ON o.id = op."orderId" AND o.status IN (${salesStatusesSql})
+      LEFT JOIN "OrderProducts" op ON op."productId" = p.id AND op."tenantId" = ${tenantId}
+      LEFT JOIN "Order" o ON o.id = op."orderId" AND o."tenantId" = ${tenantId} AND o.status IN (${salesStatusesSql})
+      WHERE p."tenantId" = ${tenantId}
       GROUP BY p.id, p.title, p.slug, c.title
       ORDER BY "unitsSold" DESC, revenue DESC, p."updatedAt" DESC
       LIMIT 5;
@@ -161,13 +170,15 @@ const getAdminDashboard = async () => {
         u.id,
         u.name,
         u.email,
-        u."createdAt",
+        tm."createdAt",
         COUNT(o.id) FILTER (WHERE o.status IN (${salesStatusesSql}))::INT AS "salesOrders",
         COALESCE(SUM(o."totalAmount") FILTER (WHERE o.status IN (${salesStatusesSql})), 0)::FLOAT AS "totalSpend"
-      FROM "User" u
-      LEFT JOIN "Order" o ON o."userId" = u.id
-      GROUP BY u.id, u.name, u.email, u."createdAt"
-      ORDER BY u."createdAt" DESC
+      FROM "TenantMembership" tm
+      INNER JOIN "User" u ON u.id = tm."userId"
+      LEFT JOIN "Order" o ON o."userId" = u.id AND o."tenantId" = ${tenantId}
+      WHERE tm."tenantId" = ${tenantId}
+      GROUP BY u.id, u.name, u.email, tm."createdAt"
+      ORDER BY tm."createdAt" DESC
       LIMIT 6;
     `,
     prisma.$queryRaw`
@@ -176,9 +187,10 @@ const getAdminDashboard = async () => {
         COALESCE(SUM(op.quantity) FILTER (WHERE o.id IS NOT NULL), 0)::INT AS "unitsSold",
         COALESCE(SUM(op.quantity * op.price) FILTER (WHERE o.id IS NOT NULL), 0)::FLOAT AS revenue
       FROM "Category" c
-      LEFT JOIN "Product" p ON p."categoryId" = c.id
-      LEFT JOIN "OrderProducts" op ON op."productId" = p.id
-      LEFT JOIN "Order" o ON o.id = op."orderId" AND o.status IN (${salesStatusesSql})
+      LEFT JOIN "Product" p ON p."categoryId" = c.id AND p."tenantId" = ${tenantId}
+      LEFT JOIN "OrderProducts" op ON op."productId" = p.id AND op."tenantId" = ${tenantId}
+      LEFT JOIN "Order" o ON o.id = op."orderId" AND o."tenantId" = ${tenantId} AND o.status IN (${salesStatusesSql})
+      WHERE c."tenantId" = ${tenantId}
       GROUP BY c.id, c.title
       ORDER BY revenue DESC, "unitsSold" DESC, c.title ASC
       LIMIT 6;

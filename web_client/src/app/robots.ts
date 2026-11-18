@@ -9,6 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: ["/"],
         disallow: [
           "/dashboard",
+          "/platform-admin",
           "/audit-logs",
           "/users",
           "/config",

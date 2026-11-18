@@ -1,6 +1,7 @@
 import prisma from "../prisma/client.js";
 import { CONFIG_KEYS, ERR_CODES, FEATURE_TYPES, getNextOrderStatuses, ORDER_STATUS, PAYMENT_TYPES, STATUS_TYPES, STOCK_TYPES } from "../utils/constants.js";
 import { calculateInvoice, generateOrderNo, getFullAddress, getShippingAmount } from "../utils/helpers.js";
+import { getCurrentTenantId } from "../utils/tenantContext.js";
 import { fileService, productService } from "./index.js";
 import { createPayment, razorpayInstance } from "./payment.js";
 import { publishInventoryEvent } from "./inventoryAgentProducer.js";
@@ -25,7 +26,10 @@ const createOrder = async ({ name, mobile, address, city, pincode, country, stat
         shippingAmount
       }
     })
-    const dbShippingInfo = await tx.config.findUnique({where: { key: CONFIG_KEYS.SHIPPING }});
+    const tenantId = getCurrentTenantId();
+    const dbShippingInfo = await tx.config.findUnique({
+      where: { tenantId_key: { tenantId, key: CONFIG_KEYS.SHIPPING } }
+    });
     const dbShippingCost = getShippingAmount(dbShippingInfo?.value, { country, state });
     if(dbShippingCost !== shippingAmount) {
       const err = new Error("Shipping Amount Changed");
@@ -266,8 +270,9 @@ const raiseDispute = async ({ orderNo, userId, userName, message }) => {
     dispute,
   };
 
+  const tenantId = getCurrentTenantId();
   const updatedOrder = await prisma.order.update({
-    where: { orderNo },
+    where: { tenantId_orderNo: { tenantId, orderNo } },
     data: { additionalInfo },
     select: {
       orderNo: true,
@@ -289,10 +294,12 @@ const raiseDispute = async ({ orderNo, userId, userName, message }) => {
 }
 
 const updateOrderStatus = async ({ orderNo, status, userId, meta = null }) => {
+  const tenantId = getCurrentTenantId();
   return await prisma.$transaction(async (tx) => {
-      const dbOrder = await tx.order.findUnique({
+      const dbOrder = await tx.order.findFirst({
         where: {
-          orderNo
+          orderNo,
+          tenantId
         }
       });
       if(!dbOrder) {
@@ -308,7 +315,7 @@ const updateOrderStatus = async ({ orderNo, status, userId, meta = null }) => {
       const promises = [
         tx.order.update({
           where: {
-            orderNo
+            tenantId_orderNo: { tenantId, orderNo }
           },
           data: {
             status
@@ -328,9 +335,10 @@ const updateOrderStatus = async ({ orderNo, status, userId, meta = null }) => {
 }
 
 const updateOrder = async ({ orderNo, additionalInfo }) => {
+  const tenantId = getCurrentTenantId();
   const order = await prisma.order.update({
     where: {
-      orderNo
+      tenantId_orderNo: { tenantId, orderNo }
     },
     data: {
       additionalInfo
@@ -345,10 +353,11 @@ const updateOrder = async ({ orderNo, additionalInfo }) => {
 }
 
 const updateOrderProductStockStatus = async ({ tx, orderId, status }) => {
+  const tenantId = getCurrentTenantId();
   return await tx.$queryRaw`
     update "Stock" s set "type" = ${status}
     from "OrderProducts" op 
-    where s.id = op."stockId" and op."orderId" = ${orderId};
+    where s.id = op."stockId" and op."orderId" = ${orderId} and s."tenantId" = ${tenantId} and op."tenantId" = ${tenantId};
   `
 }
 

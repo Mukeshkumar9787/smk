@@ -11,81 +11,106 @@ import {
   SITE_URL,
   absoluteUrl,
 } from "@/lib/seo";
+import { fetchCurrentTenantServer } from "@/lib/tenantServer";
+import { buildThemeCssVariables } from "@/lib/theme";
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#0ea5e9",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const tenant = await fetchCurrentTenantServer();
+  return {
+    width: "device-width",
+    initialScale: 1,
+    themeColor: tenant?.branding?.primaryColor || "#0ea5e9",
+  };
+}
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: SITE_TITLE,
-    template: `%s | ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-  applicationName: SITE_NAME,
-  keywords: [
-    "SMK",
-    "SMK store",
-    "SMK ecommerce",
-    "online shopping India",
-    "new arrivals",
-    "curated collections",
-  ],
-  authors: [{ name: SITE_NAME, url: SITE_URL }],
-  creator: SITE_NAME,
-  publisher: SITE_NAME,
-  alternates: {
-    canonical: SITE_URL,
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await fetchCurrentTenantServer();
+  const storeName = tenant?.branding?.storeName || SITE_NAME;
+  const defaultTitle = tenant?.branding?.seoTitle || `${storeName} | Online Shopping Store`;
+  const description = tenant?.branding?.seoDescription || SITE_DESCRIPTION;
+  const ogImage = tenant?.branding?.logoUrl || DEFAULT_OG_IMAGE;
+  const favicon = tenant?.branding?.faviconUrl || "/favicon.ico";
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: defaultTitle || SITE_TITLE,
+      template: `%s | ${storeName}`,
+    },
+    description,
+    applicationName: storeName,
+    keywords: [
+      storeName,
+      `${storeName} store`,
+      "online shopping",
+      "new arrivals",
+      "curated collections",
+    ],
+    authors: [{ name: storeName, url: SITE_URL }],
+    creator: storeName,
+    publisher: storeName,
+    alternates: {
+      canonical: SITE_URL,
+    },
+    robots: {
       index: true,
       follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_IN",
-    url: SITE_URL,
-    siteName: SITE_NAME,
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    images: [
-      {
-        url: absoluteUrl(DEFAULT_OG_IMAGE),
-        alt: SITE_NAME,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
       },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    images: [absoluteUrl(DEFAULT_OG_IMAGE)],
-  },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/images/logo/smk.jpg",
-  },
-};
+    },
+    openGraph: {
+      type: "website",
+      locale: "en_IN",
+      url: SITE_URL,
+      siteName: storeName,
+      title: defaultTitle,
+      description,
+      images: [
+        {
+          url: absoluteUrl(ogImage),
+          alt: storeName,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: defaultTitle,
+      description,
+      images: [absoluteUrl(ogImage)],
+    },
+    icons: {
+      icon: favicon,
+      apple: ogImage,
+    },
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const tenant = await fetchCurrentTenantServer();
+  const themeVars = buildThemeCssVariables(tenant?.branding);
+
   return (
-    <html lang="en" suppressHydrationWarning={true}>
-      <body className="bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_24%),linear-gradient(180deg,#ffffff_0%,#f6faff_100%)] pb-[calc(6rem+env(safe-area-inset-bottom))] text-dark xl:pb-0">
-        <SiteShell>{children}</SiteShell>
+    <html
+      lang="en"
+      suppressHydrationWarning={true}
+      style={themeVars as React.CSSProperties}
+    >
+      <body
+        className="pb-[calc(6rem+env(safe-area-inset-bottom))] text-dark xl:pb-0"
+        style={{
+          background: `radial-gradient(circle at top right, rgba(${themeVars["--brand-accent"].replace(/ /g, ",")}, 0.12), transparent 24%), linear-gradient(180deg, #ffffff 0%, ${tenant?.branding?.backgroundColor || "#f6faff"} 100%)`,
+        }}
+      >
+        <SiteShell initialTenant={tenant}>{children}</SiteShell>
       </body>
     </html>
   );

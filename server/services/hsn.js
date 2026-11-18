@@ -36,7 +36,7 @@ const getHsnCodes = async ({ status }) => {
  * Get single hsn
  */
 const getHsnBySlug = async (code) => {
-  const hsn = await prisma.hsn.findUnique({
+  const hsn = await prisma.hsn.findFirst({
     select: {
       id: true,
       code: true,

@@ -2,6 +2,7 @@ import prisma, { PrismaConfig } from "../prisma/client.js";
 
 import { ERR_CODES, FEATURE_TYPES, STOCK_TYPES, STATUS_TYPES } from "../utils/constants.js";
 import { convertToFullFilePath, deleteFiles, slugText } from "../utils/helpers.js";
+import { getCurrentTenant, getCurrentTenantId } from "../utils/tenantContext.js";
 import { sendMail } from "../utils/mailUtils.js";
 import { fileService } from "./index.js";
 
@@ -9,6 +10,17 @@ import { fileService } from "./index.js";
  * Create Product
  */
 const createProduct = async ({ title, description, fileIds, deletedFileIds, categoryId, hsnId, mrp, price, stock, status, sizeId, colorId, variant }) => {
+  const tenant = getCurrentTenant();
+  const maxProducts = tenant?.plan?.maxProducts;
+  if (maxProducts && maxProducts > 0) {
+    const currentCount = await prisma.product.count();
+    if (currentCount >= maxProducts) {
+      const err = new Error(`Your current plan allows up to ${maxProducts} products. Upgrade your plan to add more products.`);
+      err.statusCode = 403;
+      throw err;
+    }
+  }
+
   let product = null;
 
   await prisma.$transaction( async (tx) => {
@@ -24,7 +36,8 @@ const createProduct = async ({ title, description, fileIds, deletedFileIds, cate
  * Get all Products
  */
 const getProducts = async ({ status, pageNumber=1, pageSize=10, search='', color, category, size, 'productIds[]': productIds = null, pagination = true, variant }) => {
-  const conditions = [];
+  const tenantId = getCurrentTenantId();
+  const conditions = [PrismaConfig.sql`p."tenantId" = ${tenantId}`];
 
   if (productIds) {
     if(typeof(productIds) === 'string'){
@@ -143,7 +156,7 @@ const getProducts = async ({ status, pageNumber=1, pageSize=10, search='', color
  */
 const getProductBySlug = async (slug, options = {}) => {
   const { allowInactive = false } = options;
-  const product = await prisma.product.findUnique({
+  const product = await prisma.product.findFirst({
     where: {
       slug,
       ...(allowInactive ? {} : { status: STATUS_TYPES.ACTIVE })
@@ -282,11 +295,13 @@ const deleteProduct = async (id) => {
 };
 
 const getProductStockById = async({ productId, tx = prisma }) => {
+  const tenantId = getCurrentTenantId();
   const productStock = await tx.$queryRaw`
       SELECT GREATEST(COALESCE(SUM(COALESCE(quantity, 0)), 0), 0) as stock
       FROM "Stock"
       WHERE
-        "productId" = ${productId}
+        "tenantId" = ${tenantId}
+        AND "productId" = ${productId}
         AND (
           type NOT IN (${STOCK_TYPES.PAYMENT_PENDING}, ${STOCK_TYPES.WITHDRAW})
           OR (
@@ -322,9 +337,11 @@ const subscribeProductRestockNotification = async ({ productId, user }) => {
     return { alreadyAvailable: true, message: "Product is already in stock." };
   }
 
+  const tenantId = getCurrentTenantId();
   await prisma.productNotification.upsert({
     where: {
-      userId_productId: {
+      tenantId_userId_productId: {
+        tenantId,
         userId: user.id,
         productId,
       },
@@ -335,6 +352,7 @@ const subscribeProductRestockNotification = async ({ productId, user }) => {
       notifiedAt: null,
     },
     create: {
+      tenantId,
       userId: user.id,
       productId,
       email: user.email,

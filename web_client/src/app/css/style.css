@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 :root {
+  --brand-primary: 60 80 224;
+  --brand-primary-dark: 28 63 183;
+  --brand-primary-light: 84 117 229;
+  --brand-primary-soft: 225 232 255;
+  --brand-accent: 14 165 233;
+  --brand-text-primary: 28 39 76;
   --app-bg: #f4f6fb;
   --surface: #ffffff;
   --surface-muted: #f8f9fc;

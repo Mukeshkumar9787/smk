@@ -14,7 +14,9 @@ import cartRoutes from "./cart.js"
 import wishlistRoutes from "./wishlist.js"
 import dashboardRoutes from "./dashboard.js"
 import auditLogRoutes from "./auditLogs.js"
+import tenantRoutes from "./tenants.js"
 import { getAuthMiddleware } from "../middlewares/authMiddleware.js";
+import { tenantMiddleware } from "../middlewares/tenantMiddleware.js";
 import { ROLE_TYPES } from "../utils/constants.js";
 import { paginationMiddleware } from "../middlewares/paginationValidationMiddleware.js";
 import { auditLogMiddleware } from "../middlewares/auditLogMiddleware.js";
@@ -31,9 +33,11 @@ router.use(
   express.static("uploads")
 );
 
+router.use(tenantMiddleware);
 router.use(paginationMiddleware);
 router.use(auditLogMiddleware);
 
+router.use("/tenants", tenantRoutes);
 router.use("/auth", authRoutes);
 
 router.use("/products", productRoutes);

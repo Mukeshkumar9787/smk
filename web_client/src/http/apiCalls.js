@@ -1,5 +1,5 @@
 
-import { API_ADDRESS, API_ADMIN_ORDERS, API_AUDIT_LOGS, API_AUDIT_LOGS_STATS, API_CART, API_CATEGORIES, API_COLOR, API_CONFIG, API_DASHBOARD, API_FILES, API_FILES_COMPLETE, API_FILES_UPLOAD_CONFIG, API_HSN, API_LOGIN, API_LOGIN_WITH_OTP, API_ORDERS, API_ORDER_DISPUTE, API_PAYMENT_VERIFY, API_PRODUCTS, API_PRODUCT_ADMIN, API_PRODUCTS_NOTIFY, API_PRODUCT_REVIEWS, API_PRODUCT_REVIEWS_ADMIN, API_PRODUCT_REVIEW_ME, API_PRODUCT_REVIEW_SELF, API_PRODUCT_REVIEW_VISIBILITY, API_REGISTER, API_RESET_PASSWORD, API_SIZE, API_USER_INFO, API_USER_UPDATE_PROFILE, API_USERS, API_USERS_ROLE, API_VERIFY_GOOGLE_TOKEN, API_VERIFY_OTP, API_WISHLIST, GET_ACTIVE_API } from './apiUrls';
+import { API_ADDRESS, API_ADMIN_ORDERS, API_AUDIT_LOGS, API_AUDIT_LOGS_STATS, API_CART, API_CATEGORIES, API_COLOR, API_CONFIG, API_DASHBOARD, API_FILES, API_FILES_COMPLETE, API_FILES_UPLOAD_CONFIG, API_HSN, API_LOGIN, API_LOGIN_WITH_OTP, API_ORDERS, API_ORDER_DISPUTE, API_PAYMENT_VERIFY, API_PRODUCTS, API_PRODUCT_ADMIN, API_PRODUCTS_NOTIFY, API_PRODUCT_REVIEWS, API_PRODUCT_REVIEWS_ADMIN, API_PRODUCT_REVIEW_ME, API_PRODUCT_REVIEW_SELF, API_PRODUCT_REVIEW_VISIBILITY, API_REGISTER, API_RESET_PASSWORD, API_SIZE, API_TENANTS_CHECK_SLUG, API_TENANTS_CURRENT_BRANDING, API_TENANTS_CURRENT_SUBSCRIPTION, API_TENANTS_PLANS, API_TENANTS_PLATFORM_CREATE, API_TENANTS_PLATFORM_OVERVIEW, API_TENANTS_PLATFORM_STATUS, API_TENANTS_PROVISION, API_TENANTS_RESOLVE, API_USER_INFO, API_USER_UPDATE_PROFILE, API_USERS, API_USERS_ROLE, API_VERIFY_GOOGLE_TOKEN, API_VERIFY_OTP, API_WISHLIST, GET_ACTIVE_API } from './apiUrls';
 import axiosInstance from './axiosInstance';
 
 export async function getCategories(params) {
@@ -13,27 +13,34 @@ export async function createCategory(data) {
 }
 
 export async function uploadFile(file) {
-  const uploadConfig = await axiosInstance.post(API_FILES_UPLOAD_CONFIG, {
-    filename: file.name,
-    contentType: file.type,
-  });
-
-  if (uploadConfig?.data?.data?.strategy === "direct") {
-    const { uploadUrl, path } = uploadConfig.data.data;
-    const directUploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type,
-      },
-      body: file,
+  try {
+    const uploadConfig = await axiosInstance.post(API_FILES_UPLOAD_CONFIG, {
+      filename: file.name,
+      contentType: file.type,
     });
 
-    if (!directUploadResponse.ok) {
-      return { success: false, message: "Direct upload failed" };
-    }
+    if (uploadConfig?.data?.data?.strategy === "direct") {
+      const { uploadUrl, path } = uploadConfig.data.data;
+      try {
+        const directUploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        });
 
-    const completeResponse = await axiosInstance.post(API_FILES_COMPLETE, { path });
-    return completeResponse.data;
+        if (directUploadResponse.ok) {
+          const completeResponse = await axiosInstance.post(API_FILES_COMPLETE, { path });
+          return completeResponse.data;
+        }
+      } catch (directErr) {
+        // Fallback to server-side R2 upload if direct browser upload hits CORS/network error
+        console.warn("Direct R2 upload failed, falling back to server upload:", directErr);
+      }
+    }
+  } catch (configErr) {
+    console.warn("Upload config fetch failed, falling back to server upload:", configErr);
   }
 
   const formData = new FormData();
@@ -377,5 +384,58 @@ export async function replaceWishlist(items) {
 
 export async function getAdminDashboard() {
   const res = await axiosInstance.get(API_DASHBOARD);
+  return res?.data || {};
+}
+
+export async function resolveCurrentTenant() {
+  const res = await axiosInstance.get(API_TENANTS_RESOLVE);
+  return res?.data || {};
+}
+
+export async function getTenantPlans() {
+  const res = await axiosInstance.get(API_TENANTS_PLANS);
+  return res?.data || {};
+}
+
+export async function checkStoreSlugAvailability(slug) {
+  const res = await axiosInstance.get(API_TENANTS_CHECK_SLUG(slug), {
+    skipGlobalLoader: true,
+    skipErrorToast: true,
+  });
+  return res?.data || {};
+}
+
+export async function provisionTenantStore(data) {
+  const res = await axiosInstance.post(API_TENANTS_PROVISION, data);
+  return res?.data || {};
+}
+
+export async function getCurrentTenantBranding() {
+  const res = await axiosInstance.get(API_TENANTS_CURRENT_BRANDING);
+  return res?.data || {};
+}
+
+export async function updateCurrentTenantBranding(data) {
+  const res = await axiosInstance.put(API_TENANTS_CURRENT_BRANDING, data);
+  return res?.data || {};
+}
+
+export async function getCurrentTenantSubscription() {
+  const res = await axiosInstance.get(API_TENANTS_CURRENT_SUBSCRIPTION);
+  return res?.data || {};
+}
+
+export async function getPlatformOverview() {
+  const res = await axiosInstance.get(API_TENANTS_PLATFORM_OVERVIEW);
+  return res?.data || {};
+}
+
+export async function createPlatformStore(data) {
+  const res = await axiosInstance.post(API_TENANTS_PLATFORM_CREATE, data);
+  return res?.data || {};
+}
+
+export async function updatePlatformStoreStatus(tenantId, status) {
+  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_STATUS(tenantId), { status });
   return res?.data || {};
 }

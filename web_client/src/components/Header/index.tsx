@@ -7,15 +7,17 @@ import Dropdown from "./Dropdown";
 import { useAppSelector } from "@/redux/store";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import { useWishlistModalContext } from "@/app/context/WishlistSidebarModalContext";
+import { useTenant } from "@/app/context/TenantContext";
 import Image from "next/image";
 import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { CONFIG_KEYS, ROLE_TYPES, STATUS_TYPES } from "@/utils/constants";
 import { getConfig, getProducts } from "@/http/apiCalls";
-import { SHOP_DETAILS } from "@/utils/appUrls";
+import { PLATFORM_ADMIN_URL, SHOP_DETAILS } from "@/utils/appUrls";
 import type { Product } from "@/types/product";
 
 const Header = () => {
   const router = useRouter();
+  const { branding, tenant } = useTenant();
   const [menuItems, setMenuItems] = useState(menuData);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const navRef = React.useRef<HTMLDivElement | null>(null);
@@ -75,10 +77,26 @@ const Header = () => {
       const userData = await getLoggedInUserData();
       if (userData) {
         setUser(userData);
+        const resolvedAdminMenu =
+          userData.role === ROLE_TYPES.ADMIN
+            ? adminMenuData.map((group) => ({
+                ...group,
+                submenu: userData.isPlatformAdmin
+                  ? [
+                      {
+                        title: "Super Admin",
+                        newTab: false,
+                        path: PLATFORM_ADMIN_URL,
+                      },
+                      ...(group.submenu || []),
+                    ]
+                  : group.submenu,
+              }))
+            : [];
         const authedMenu = [
           ...menuData.filter((item) => item.path !== "/contact"),
           ...userMenuData,
-          ...(userData.role === ROLE_TYPES.ADMIN ? adminMenuData : []),
+          ...resolvedAdminMenu,
           ...menuData.filter((item) => item.path === "/contact"),
         ];
         setMenuItems(authedMenu);
@@ -257,15 +275,26 @@ const Header = () => {
           {/* <!-- header top left --> */}
           <div className="flex min-w-0 items-center gap-3">
             <Link className="flex-shrink-0" href="/">
-              <Image
-                src="/images/logo/smk.jpg"
-                alt="SMK Logo"
-                width={50}
-                height={50}
-                className="h-9 w-auto rounded-md object-contain"
-              />
+              {branding?.logoUrl ? (
+                <img
+                  src={branding.logoUrl}
+                  alt={`${branding.storeName || compInfo?.name || "Store"} Logo`}
+                  width={50}
+                  height={50}
+                  className="h-9 w-auto max-w-[120px] rounded-md object-contain"
+                />
+              ) : (
+                <span
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm"
+                  style={{ backgroundColor: branding?.primaryColor || "#3C50E0" }}
+                >
+                  {(branding?.storeName || tenant?.name || "S").slice(0, 2).toUpperCase()}
+                </span>
+              )}
             </Link>
-            <span className="hidden truncate font-semibold tracking-tight text-dark sm:block">{compInfo?.name || "SMK"}</span>
+            <span className="hidden truncate font-semibold tracking-tight text-dark sm:block">
+              {branding?.storeName || compInfo?.name || "SMK"}
+            </span>
           </div>
 
           <div className="hidden min-w-0 flex-1 px-4 lg:block">

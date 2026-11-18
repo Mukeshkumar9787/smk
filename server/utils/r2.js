@@ -1,6 +1,7 @@
 import { PutObjectCommand, DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import path from "path";
+import { DEFAULT_TENANT_ID, getTenantContext } from "./tenantContext.js";
 
 const requiredEnvKeys = [
   "R2_ENDPOINT",
@@ -36,7 +37,12 @@ const sanitizeFilename = (filename = "file") =>
 const buildObjectData = (filename) => {
   const extension = path.extname(filename || "");
   const basename = path.basename(filename || "file", extension);
-  const storedPath = `${Date.now()}-${sanitizeFilename(basename)}${extension}`;
+  const rawName = `${Date.now()}-${sanitizeFilename(basename)}${extension}`;
+  const tenantId = getTenantContext()?.tenantId;
+  const storedPath =
+    tenantId && tenantId !== DEFAULT_TENANT_ID
+      ? `tenants/${tenantId}/${rawName}`
+      : rawName;
   const bucketPath = (process.env.R2_BUCKET_PATH || "uploads").replace(/^\/+|\/+$/g, "");
   return {
     storedPath,

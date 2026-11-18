@@ -6,6 +6,7 @@ import { sendMail } from "./mailUtils.js";
 import configService from "../services/config.js";
 import userService from "../services/users.js";
 import { deleteR2FileByPath, isR2Configured } from "./r2.js";
+import { getCurrentTenant } from "./tenantContext.js";
 
 export const toCamelCase = (row) => {
   const obj = {};
@@ -302,8 +303,8 @@ export const sendOrderDisputeMail = async ({
 
 export const getAppName = async() => {
   const config = await configService.getAll({});
-  const appName = await config[CONFIG_KEYS.COMP_INFO]?.name || '';
-  return appName;
+  const tenant = getCurrentTenant();
+  return config[CONFIG_KEYS.COMP_INFO]?.name || tenant?.branding?.storeName || tenant?.name || '';
 }
 
 export const getShippingAmount = (shipData, shippingInfo) => {

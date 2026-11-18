@@ -1,5 +1,6 @@
 import { STATUS_TYPES } from "@/utils/constants";
 import type { SeoProductData, SeoReviewData } from "./seo";
+import { getServerTenantHeaders } from "./tenantServer";
 
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api"
@@ -21,14 +22,19 @@ async function serverApiFetch<T = any>(
   const timeoutMs = options.timeoutMs ?? DEFAULT_SERVER_FETCH_TIMEOUT_MS;
   const maxRetries = Math.max(0, options.retries ?? 0);
 
+  const tenantHeaders = await getServerTenantHeaders();
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const res = await fetch(url, {
         headers: {
           Accept: "application/json",
           "ngrok-skip-browser-warning": "1",
+          ...tenantHeaders,
         },
-        next: { revalidate: revalidateSeconds },
+        ...(tenantHeaders["x-tenant-slug"]
+          ? { cache: "no-store" as const }
+          : { next: { revalidate: revalidateSeconds } }),
         signal: AbortSignal.timeout(timeoutMs),
       });
 

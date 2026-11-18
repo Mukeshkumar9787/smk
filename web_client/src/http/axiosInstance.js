@@ -17,11 +17,26 @@ const axiosInstance = axios.create({
 
 let globalRequestId = 0;
 
+function readTenantCookie() {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)smk_tenant_slug=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 axiosInstance.interceptors.request.use((config) => {
   try {
     const token = getStoredToken();
     if (token) {
       config.headers.authorization = `Bearer ${token}`; // eslint-disable-line
+    }
+    if (typeof window !== "undefined") {
+      const tenantSlug = readTenantCookie();
+      if (tenantSlug && !config.headers["x-tenant-slug"]) {
+        config.headers["x-tenant-slug"] = tenantSlug;
+      }
+      if (window.location?.host && !config.headers["x-tenant-host"]) {
+        config.headers["x-tenant-host"] = window.location.host;
+      }
     }
     const isGet = config.method?.toLowerCase() === "get";
     // Only increment global loader on the first attempt, not repeated retries

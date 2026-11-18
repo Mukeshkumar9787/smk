@@ -36,7 +36,7 @@ const getAll = async ({ status }) => {
  * Get single Color
  */
 const getBySlug = async (title) => {
-  const Color = await prisma.color.findUnique({
+  const Color = await prisma.color.findFirst({
     select: {
       id: true,
       title: true,
