@@ -182,45 +182,34 @@ const provisionTenant = async ({
     (await rawPrisma.plan.findUnique({ where: { code: String(planCode).toUpperCase() } })) ||
     (await rawPrisma.plan.findFirst({ where: { isActive: true }, orderBy: { priceMonthly: "asc" } }));
 
-  const existingUser = await rawPrisma.user.findUnique({
-    where: { email: cleanEmail },
-  });
-
-  if (!existingUser) {
-    if (!ownerPassword || String(ownerPassword).length < 8) {
-      const err = new Error("Owner password must be at least 8 characters for a new account.");
-      err.statusCode = 400;
-      throw err;
-    }
-  } else if (!actorUser?.isPlatformAdmin && actorUser?.id !== existingUser.id) {
-    const err = new Error(
-      "An account with this email already exists. Please sign in first or use a different email."
-    );
-    err.statusCode = 409;
+  if (!ownerPassword || String(ownerPassword).length < 8) {
+    const err = new Error("Owner password must be at least 8 characters.");
+    err.statusCode = 400;
     throw err;
   }
 
-  const passwordHash = !existingUser ? await hashedPassword(ownerPassword) : null;
+  const passwordHash = await hashedPassword(ownerPassword);
 
   const result = await rawPrisma.$transaction(async (tx) => {
-    const owner =
-      existingUser ||
-      (await tx.user.create({
-        data: {
-          name: String(ownerName || cleanStoreName).trim(),
-          email: cleanEmail,
-          password: passwordHash,
-          mobile: ownerMobile || null,
-          role: "USER",
-        },
-      }));
-
     const tenant = await tx.tenant.create({
       data: {
         name: cleanStoreName,
         slug: slugCheck.slug,
         status: TENANT_STATUS.ACTIVE,
         planId: plan?.id || null,
+      },
+    });
+
+    // Always create an isolated store-owner account scoped strictly to this new tenant
+    const owner = await tx.user.create({
+      data: {
+        tenantId: tenant.id,
+        name: String(ownerName || cleanStoreName).trim(),
+        email: cleanEmail,
+        password: passwordHash,
+        mobile: ownerMobile || null,
+        role: "USER",
+        isPlatformAdmin: false,
       },
     });
 
@@ -322,7 +311,7 @@ const provisionTenant = async ({
   clearTenantCache();
 
   const token = jwt.sign(
-    { id: result.owner.id },
+    { id: result.owner.id, tenantId: result.tenant.id },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );

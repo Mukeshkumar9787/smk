@@ -1,7 +1,7 @@
 import prisma, { rawPrisma } from "../prisma/client.js";
 import { FEATURE_TYPES, ROLE_TYPES, TENANT_ROLES } from "../utils/constants.js";
 import { convertToFullFilePath, deleteFiles } from "../utils/helpers.js";
-import { getCurrentTenantId } from "../utils/tenantContext.js";
+import { DEFAULT_TENANT_ID, getCurrentTenantId } from "../utils/tenantContext.js";
 import { fileService } from "./index.js";
 
 const PLATFORM_ADMIN_EMAILS = new Set(
@@ -17,6 +17,7 @@ const getUserInfo = async ({ id }) => {
     where: { id },
     select: {
       id: true,
+      tenantId: true,
       name: true,
       email: true,
       createdAt: true,
@@ -27,6 +28,11 @@ const getUserInfo = async ({ id }) => {
   });
 
   if (!user) {
+    return null;
+  }
+
+  // Enforce strict per-tenant user isolation: a user from Store A does not exist in Store B
+  if (tenantId && user.tenantId && user.tenantId !== tenantId) {
     return null;
   }
 
@@ -57,6 +63,7 @@ const getUserInfo = async ({ id }) => {
       : null,
     rawPrisma.tenantMembership.findMany({
       where: {
+        tenantId,
         userId: user.id,
         role: { in: [TENANT_ROLES.STORE_OWNER, TENANT_ROLES.STORE_STAFF] },
       },
@@ -77,7 +84,9 @@ const getUserInfo = async ({ id }) => {
 
   const isPlatformAdmin = Boolean(
     user.isPlatformAdmin ||
-      (user.email && PLATFORM_ADMIN_EMAILS.has(String(user.email).toLowerCase()))
+      (user.tenantId === DEFAULT_TENANT_ID &&
+        user.email &&
+        PLATFORM_ADMIN_EMAILS.has(String(user.email).toLowerCase()))
   );
   const isTenantAdmin =
     isPlatformAdmin ||
@@ -226,6 +235,16 @@ const getAll = async ({ skip = 0, take = 10, search, role }) => {
 
 const changeRole = async ({ id, role }) => {
   const tenantId = getCurrentTenantId();
+  const targetUser = await rawPrisma.user.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+  if (!targetUser) {
+    const err = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
   const targetTenantRole =
     role === ROLE_TYPES.ADMIN ? TENANT_ROLES.STORE_STAFF : TENANT_ROLES.CUSTOMER;
 

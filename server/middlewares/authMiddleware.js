@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { rawPrisma } from "../prisma/client.js";
 import userService from "../services/users.js";
 import { ROLE_TYPES, TENANT_ROLES } from "../utils/constants.js";
-import { getCurrentTenantId } from "../utils/tenantContext.js";
+import { DEFAULT_TENANT_ID, getCurrentTenantId } from "../utils/tenantContext.js";
 
 const PLATFORM_ADMIN_EMAILS = new Set(
   (process.env.PLATFORM_ADMIN_EMAILS || "mukeshkumar87086@gmail.com")
@@ -15,7 +15,9 @@ export function isSuperAdminUser(user) {
   if (!user) return false;
   return Boolean(
     user.isPlatformAdmin ||
-      (user.email && PLATFORM_ADMIN_EMAILS.has(String(user.email).toLowerCase()))
+      (user.tenantId === DEFAULT_TENANT_ID &&
+        user.email &&
+        PLATFORM_ADMIN_EMAILS.has(String(user.email).toLowerCase()))
   );
 }
 
@@ -31,12 +33,18 @@ export const getAuthMiddleware = (allowedRoles = []) => {
       const token = authHeader.split(" ")[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const user = await userService.getUserInfo(decoded);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      const tenantId = req.tenant?.id || getCurrentTenantId();
+      if (decoded.tenantId && tenantId && decoded.tenantId !== tenantId) {
+        return res.status(401).json({ message: "Unauthorized: Session belongs to a different store" });
       }
 
-      const tenantId = req.tenant?.id || getCurrentTenantId();
+      const user = await userService.getUserInfo(decoded);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized: Account not found in this store" });
+      }
+      if (tenantId && user.tenantId && user.tenantId !== tenantId) {
+        return res.status(401).json({ message: "Unauthorized: Account belongs to a different store" });
+      }
       const membership = tenantId
         ? await rawPrisma.tenantMembership.findUnique({
             where: {

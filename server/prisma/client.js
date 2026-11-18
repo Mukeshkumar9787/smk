@@ -15,6 +15,7 @@ const basePrisma = new PrismaClient({
 });
 
 const TENANT_SCOPED_MODELS = new Set([
+  "User",
   "AuditLog",
   "Address",
   "Category",

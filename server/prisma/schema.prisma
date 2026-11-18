@@ -86,6 +86,7 @@ model Tenant {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   branding             TenantBranding?
+  users                User[]
   memberships          TenantMembership[]
   subscriptions        Subscription[]
   paymentConfig        TenantPaymentConfig?
@@ -177,8 +178,10 @@ model TenantMembership {
 
 model User {
   id                   Int                   @id @default(autoincrement())
+  tenantId             String                @default("tenant_smk_default")
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name                 String
-  email                String                @unique
+  email                String
   password             String?
   mobile               String?
   role                 Role                  @default(USER)
@@ -195,6 +198,10 @@ model User {
   wishlistItems        WishlistItem[]
   productReviews       ProductReview[]
   auditLogs            AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
 }
 
 model AuditLog {

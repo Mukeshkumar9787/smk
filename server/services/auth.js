@@ -10,6 +10,35 @@ import { OAuth2Client } from 'google-auth-library';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+
+async function findTenantUserByEmail(email) {
+  const cleanEmail = normalizeEmail(email);
+  const tenantId = getCurrentTenantId();
+  if (!cleanEmail) return null;
+
+  const exact = await rawPrisma.user.findUnique({
+    where: {
+      tenantId_email: {
+        tenantId,
+        email: cleanEmail,
+      },
+    },
+  });
+  if (exact) return exact;
+
+  // Case-insensitive fallback for legacy mixed-case emails within the same tenant
+  return rawPrisma.user.findFirst({
+    where: {
+      tenantId,
+      email: {
+        equals: cleanEmail,
+        mode: "insensitive",
+      },
+    },
+  });
+}
+
 async function ensureTenantMembership(userId, role = TENANT_ROLES.CUSTOMER) {
   const tenantId = getCurrentTenantId();
   if (!tenantId || !userId) return;
@@ -31,14 +60,15 @@ async function ensureTenantMembership(userId, role = TENANT_ROLES.CUSTOMER) {
 
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id }, 
+    { id: user.id, tenantId: user.tenantId || getCurrentTenantId() },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
 };
 
 const register = async ({ name, email, password, mobile }) => {
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = normalizeEmail(email);
+  const existing = await findTenantUserByEmail(cleanEmail);
 
   if (existing) {
     const err = new Error("Account already exists");
@@ -47,7 +77,7 @@ const register = async ({ name, email, password, mobile }) => {
   }
   const otp = generateSecureOTP();
   const appName = await getAppName();
-  sendMail({ to: email, 
+  sendMail({ to: cleanEmail, 
     subject: `${appName} OTP for Registration`, 
     html: `
     <h2>OTP Verification</h2>
@@ -59,7 +89,7 @@ const register = async ({ name, email, password, mobile }) => {
   await prisma.otp.create({
     data: {
       type: OTP_TYPES.REGISTER,
-      email,
+      email: cleanEmail,
       otp: hashOTP(otp),
       meta: {
         name, 
@@ -69,12 +99,13 @@ const register = async ({ name, email, password, mobile }) => {
     }
   });
   return {
-    email
+    email: cleanEmail
   }
 };
 
 const resetPassword = async ({ email, password }) => {
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = normalizeEmail(email);
+  const existing = await findTenantUserByEmail(cleanEmail);
 
   if (!existing) {
     const err = new Error("Account doesn't exists");
@@ -84,7 +115,7 @@ const resetPassword = async ({ email, password }) => {
   const otp = generateSecureOTP();
   const appName = await getAppName();
 
-  sendMail({ to: email, 
+  sendMail({ to: cleanEmail, 
     subject: `${appName} OTP for Reset Password`, 
     html: `
     <h2>OTP Verification</h2>
@@ -96,7 +127,7 @@ const resetPassword = async ({ email, password }) => {
   await prisma.otp.create({
     data: {
       type: OTP_TYPES.RESET_PASSWORD,
-      email,
+      email: cleanEmail,
       otp: hashOTP(otp),
       meta: {
         password: hashed,
@@ -104,12 +135,13 @@ const resetPassword = async ({ email, password }) => {
     }
   });
   return {
-    email
+    email: cleanEmail
   }
 };
 
 const loginWithOTP = async ({ email }) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = normalizeEmail(email);
+  const user = await findTenantUserByEmail(cleanEmail);
 
   if (!user) {
     const err = new Error("Account does not exists");
@@ -119,7 +151,7 @@ const loginWithOTP = async ({ email }) => {
   const appName = await getAppName();
 
   const otp = generateSecureOTP();
-  sendMail({ to: email, 
+  sendMail({ to: cleanEmail, 
     subject: `${appName} OTP for Login`, 
     html: `
     <h2>OTP Verification</h2>
@@ -130,18 +162,19 @@ const loginWithOTP = async ({ email }) => {
   await prisma.otp.create({
     data: {
       type: OTP_TYPES.LOGIN,
-      email,
+      email: cleanEmail,
       otp: hashOTP(otp),
       meta: null
     }
   });
   return {
-    email
+    email: cleanEmail
   }
 };
 
 const login = async ({ email, password }) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = normalizeEmail(email);
+  const user = await findTenantUserByEmail(cleanEmail);
 
   if (!user) {
     const err = new Error("Invalid credentials");
@@ -176,7 +209,9 @@ const login = async ({ email, password }) => {
 
 
 const verifyOTP = async ({ email, otp, type }) => {
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = normalizeEmail(email);
+  const tenantId = getCurrentTenantId();
+  const existing = await findTenantUserByEmail(cleanEmail);
 
   if ((type === OTP_TYPES.REGISTER) && existing) {
     const err = new Error("Account already exists");
@@ -193,7 +228,10 @@ const verifyOTP = async ({ email, otp, type }) => {
   const otpRecord = await prisma.otp.findFirst({
     where:{
       type,
-      email,
+      email: {
+        equals: cleanEmail,
+        mode: "insensitive",
+      },
       otp: hashOTP(otp),
       verifiedAt: null,
     },
@@ -219,7 +257,13 @@ const verifyOTP = async ({ email, otp, type }) => {
   });
 
   if(type === OTP_TYPES.REGISTER){
-    const user = await prisma.user.create({ data: {...otpRecord.meta, email} });
+    const user = await prisma.user.create({
+      data: {
+        ...otpRecord.meta,
+        email: cleanEmail,
+        tenantId,
+      },
+    });
     await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
     const token = generateToken(user);
     return {
@@ -230,7 +274,7 @@ const verifyOTP = async ({ email, otp, type }) => {
     };
   }
   if(type === OTP_TYPES.LOGIN){
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = existing;
     await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
     const token = generateToken(user);
     return {
@@ -241,10 +285,10 @@ const verifyOTP = async ({ email, otp, type }) => {
     };
   }
   if(type === OTP_TYPES.RESET_PASSWORD){
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = existing;
     await prisma.user.update({
       where: {
-        email
+        id: user.id,
       },
       data: {
         password: otpRecord.meta.password
@@ -265,14 +309,17 @@ async function verifyGoogleToken(token) {
   });
 
   const payload = ticket.getPayload();
+  const cleanEmail = normalizeEmail(payload.email);
+  const tenantId = getCurrentTenantId();
   
-  let user = await prisma.user.findUnique({ where: { email: payload.email } });
+  let user = await findTenantUserByEmail(cleanEmail);
 
   if (!user) {
     user = await prisma.user.create({
       data: {
+        tenantId,
         name: payload.name,
-        email: payload.email,
+        email: cleanEmail,
         password: null, // No password for Google accounts
       },
     });
