@@ -23,18 +23,22 @@ async function serverApiFetch<T = any>(
   const maxRetries = Math.max(0, options.retries ?? 0);
 
   const tenantHeaders = await getServerTenantHeaders();
+  const tenantSlug = tenantHeaders["x-tenant-slug"];
+  // Include tenant in URL query so Next.js Data Cache keys stay strictly isolated per tenant
+  const separator = url.includes("?") ? "&" : "?";
+  const cacheScopedUrl = tenantSlug
+    ? `${url}${separator}tenant=${encodeURIComponent(tenantSlug)}`
+    : url;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(url, {
+      const res = await fetch(cacheScopedUrl, {
         headers: {
           Accept: "application/json",
           "ngrok-skip-browser-warning": "1",
           ...tenantHeaders,
         },
-        ...(tenantHeaders["x-tenant-slug"]
-          ? { cache: "no-store" as const }
-          : { next: { revalidate: revalidateSeconds } }),
+        next: { revalidate: Math.min(revalidateSeconds, 60) },
         signal: AbortSignal.timeout(timeoutMs),
       });
 
