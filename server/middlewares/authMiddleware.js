@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import { rawPrisma } from "../prisma/client.js";
 import userService from "../services/users.js";
 import { ROLE_TYPES, TENANT_ROLES } from "../utils/constants.js";
 import { DEFAULT_TENANT_ID, getCurrentTenantId } from "../utils/tenantContext.js";
@@ -45,22 +44,13 @@ export const getAuthMiddleware = (allowedRoles = []) => {
       if (tenantId && user.tenantId && user.tenantId !== tenantId) {
         return res.status(401).json({ message: "Unauthorized: Account belongs to a different store" });
       }
-      const membership = tenantId
-        ? await rawPrisma.tenantMembership.findUnique({
-            where: {
-              tenantId_userId: {
-                tenantId,
-                userId: user.id,
-              },
-            },
-          })
-        : null;
 
       const superAdmin = isSuperAdminUser(user);
       const isTenantAdmin =
         superAdmin ||
-        membership?.role === TENANT_ROLES.STORE_OWNER ||
-        membership?.role === TENANT_ROLES.STORE_STAFF;
+        user.tenantRole === TENANT_ROLES.STORE_OWNER ||
+        user.tenantRole === TENANT_ROLES.STORE_STAFF ||
+        user.role === ROLE_TYPES.ADMIN;
 
       // Effective role scoped strictly to the current tenant
       const effectiveRole = isTenantAdmin ? ROLE_TYPES.ADMIN : ROLE_TYPES.USER;
@@ -70,7 +60,7 @@ export const getAuthMiddleware = (allowedRoles = []) => {
         isPlatformAdmin: superAdmin,
         tenantRole: superAdmin
           ? "PLATFORM_ADMIN"
-          : membership?.role || TENANT_ROLES.CUSTOMER,
+          : user.tenantRole || TENANT_ROLES.CUSTOMER,
         role: effectiveRole,
       };
 

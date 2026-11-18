@@ -39,25 +39,6 @@ async function findTenantUserByEmail(email) {
   });
 }
 
-async function ensureTenantMembership(userId, role = TENANT_ROLES.CUSTOMER) {
-  const tenantId = getCurrentTenantId();
-  if (!tenantId || !userId) return;
-  await rawPrisma.tenantMembership.upsert({
-    where: {
-      tenantId_userId: {
-        tenantId,
-        userId,
-      },
-    },
-    create: {
-      tenantId,
-      userId,
-      role,
-    },
-    update: {},
-  });
-}
-
 const generateToken = (user) => {
   return jwt.sign(
     { id: user.id, tenantId: user.tenantId || getCurrentTenantId() },
@@ -196,7 +177,6 @@ const login = async ({ email, password }) => {
     throw err;
   }
 
-  await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
   const token = generateToken(user);
 
   return {
@@ -262,9 +242,9 @@ const verifyOTP = async ({ email, otp, type }) => {
         ...otpRecord.meta,
         email: cleanEmail,
         tenantId,
+        tenantRole: TENANT_ROLES.CUSTOMER,
       },
     });
-    await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
     const token = generateToken(user);
     return {
       id: user.id,
@@ -275,7 +255,6 @@ const verifyOTP = async ({ email, otp, type }) => {
   }
   if(type === OTP_TYPES.LOGIN){
     const user = existing;
-    await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
     const token = generateToken(user);
     return {
       id: user.id,
@@ -318,6 +297,7 @@ async function verifyGoogleToken(token) {
     user = await prisma.user.create({
       data: {
         tenantId,
+        tenantRole: TENANT_ROLES.CUSTOMER,
         name: payload.name,
         email: cleanEmail,
         password: null, // No password for Google accounts
@@ -348,7 +328,6 @@ async function verifyGoogleToken(token) {
     }
   }
 
-  await ensureTenantMembership(user.id, TENANT_ROLES.CUSTOMER);
   const jwtToken = generateToken(user);
 
   return {

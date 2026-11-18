@@ -87,7 +87,6 @@ model Tenant {
   updatedAt            DateTime              @updatedAt
   branding             TenantBranding?
   users                User[]
-  memberships          TenantMembership[]
   subscriptions        Subscription[]
   paymentConfig        TenantPaymentConfig?
   auditLogs            AuditLog[]
@@ -160,22 +159,6 @@ model TenantPaymentConfig {
   updatedAt              DateTime @updatedAt
 }
 
-model TenantMembership {
-  id        Int        @id @default(autoincrement())
-  tenantId  String
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId    Int
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      TenantRole @default(CUSTOMER)
-  status    Status     @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@unique([tenantId, userId])
-  @@index([tenantId, role])
-  @@index([userId])
-}
-
 model User {
   id                   Int                   @id @default(autoincrement())
   tenantId             String                @default("tenant_smk_default")
@@ -185,11 +168,11 @@ model User {
   password             String?
   mobile               String?
   role                 Role                  @default(USER)
+  tenantRole           TenantRole            @default(CUSTOMER)
   isPlatformAdmin      Boolean               @default(false)
   status               Status                @default(ACTIVE)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  memberships          TenantMembership[]
   orders               Order[]
   addresses            Address[]
   orderStatusHistories OrderStatusHistory[]
@@ -201,6 +184,7 @@ model User {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([tenantId, tenantRole])
   @@index([email])
 }
 

@@ -208,7 +208,8 @@ const provisionTenant = async ({
         email: cleanEmail,
         password: passwordHash,
         mobile: ownerMobile || null,
-        role: "USER",
+        role: "ADMIN",
+        tenantRole: TENANT_ROLES.STORE_OWNER,
         isPlatformAdmin: false,
       },
     });
@@ -241,15 +242,6 @@ const provisionTenant = async ({
         },
       });
     }
-
-    await tx.tenantMembership.create({
-      data: {
-        tenantId: tenant.id,
-        userId: owner.id,
-        role: TENANT_ROLES.STORE_OWNER,
-        status: STATUS_TYPES.ACTIVE,
-      },
-    });
 
     // Seed starter catalog attributes so merchant can create products immediately
     await tx.size.createMany({
@@ -442,13 +434,9 @@ const getPlatformOverview = async () => {
       include: {
         branding: true,
         plan: true,
-        memberships: {
-          where: { role: TENANT_ROLES.STORE_OWNER },
-          include: {
-            user: {
-              select: { id: true, name: true, email: true },
-            },
-          },
+        users: {
+          where: { tenantRole: TENANT_ROLES.STORE_OWNER },
+          select: { id: true, name: true, email: true },
           take: 1,
         },
         _count: {
@@ -456,7 +444,7 @@ const getPlatformOverview = async () => {
             products: true,
             orders: true,
             categories: true,
-            memberships: true,
+            users: true,
           },
         },
       },
@@ -496,7 +484,7 @@ const getPlatformOverview = async () => {
       planCode: t.plan?.code || "STARTER",
       primaryColor: t.branding?.primaryColor || "#3C50E0",
       logoUrl: t.branding?.logoUrl || null,
-      owner: t.memberships?.[0]?.user || null,
+      owner: t.users?.[0] || null,
       counts: t._count,
       createdAt: t.createdAt,
     })),

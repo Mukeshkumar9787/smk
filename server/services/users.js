@@ -23,7 +23,17 @@ const getUserInfo = async ({ id }) => {
       createdAt: true,
       mobile: true,
       role: true,
+      tenantRole: true,
       isPlatformAdmin: true,
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          customDomain: true,
+        },
+      },
     },
   });
 
@@ -36,51 +46,19 @@ const getUserInfo = async ({ id }) => {
     return null;
   }
 
-  const [profilePicture, membership, ownedStores] = await Promise.all([
-    prisma.file.findFirst({
-      where: {
-        feature: FEATURE_TYPES.USER,
-        featureId: user.id,
-      },
-      select: {
-        id: true,
-        path: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    }),
-    tenantId
-      ? rawPrisma.tenantMembership.findUnique({
-          where: {
-            tenantId_userId: {
-              tenantId,
-              userId: user.id,
-            },
-          },
-          select: { role: true, status: true },
-        })
-      : null,
-    rawPrisma.tenantMembership.findMany({
-      where: {
-        tenantId,
-        userId: user.id,
-        role: { in: [TENANT_ROLES.STORE_OWNER, TENANT_ROLES.STORE_STAFF] },
-      },
-      select: {
-        role: true,
-        tenant: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            status: true,
-            customDomain: true,
-          },
-        },
-      },
-    }),
-  ]);
+  const profilePicture = await prisma.file.findFirst({
+    where: {
+      feature: FEATURE_TYPES.USER,
+      featureId: user.id,
+    },
+    select: {
+      id: true,
+      path: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
 
   const isPlatformAdmin = Boolean(
     user.isPlatformAdmin ||
@@ -90,17 +68,23 @@ const getUserInfo = async ({ id }) => {
   );
   const isTenantAdmin =
     isPlatformAdmin ||
-    membership?.role === TENANT_ROLES.STORE_OWNER ||
-    membership?.role === TENANT_ROLES.STORE_STAFF;
+    user.tenantRole === TENANT_ROLES.STORE_OWNER ||
+    user.tenantRole === TENANT_ROLES.STORE_STAFF ||
+    user.role === ROLE_TYPES.ADMIN;
+
+  const { tenant, ...userFields } = user;
 
   return {
-    ...user,
+    ...userFields,
     isPlatformAdmin,
     tenantRole: isPlatformAdmin
       ? TENANT_ROLES.PLATFORM_ADMIN
-      : membership?.role || TENANT_ROLES.CUSTOMER,
+      : user.tenantRole || TENANT_ROLES.CUSTOMER,
     role: isTenantAdmin ? ROLE_TYPES.ADMIN : ROLE_TYPES.USER,
-    stores: ownedStores.map((m) => ({ ...m.tenant, role: m.role })),
+    stores:
+      isTenantAdmin && tenant
+        ? [{ ...tenant, role: user.tenantRole || TENANT_ROLES.STORE_OWNER }]
+        : [],
     profilePictureFileId: profilePicture ? profilePicture.id : null,
     profilePicture: profilePicture?.path
       ? convertToFullFilePath(profilePicture.path)
@@ -109,7 +93,6 @@ const getUserInfo = async ({ id }) => {
 };
 
 const getUsers = async ({ role }) => {
-  const tenantId = getCurrentTenantId();
   const tenantRoles =
     role === ROLE_TYPES.ADMIN
       ? [TENANT_ROLES.STORE_OWNER, TENANT_ROLES.STORE_STAFF]
@@ -117,25 +100,18 @@ const getUsers = async ({ role }) => {
       ? [TENANT_ROLES.CUSTOMER]
       : undefined;
 
-  const memberships = await rawPrisma.tenantMembership.findMany({
+  return prisma.user.findMany({
     where: {
-      tenantId,
-      ...(tenantRoles ? { role: { in: tenantRoles } } : {}),
+      ...(tenantRoles ? { tenantRole: { in: tenantRoles } } : {}),
     },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          createdAt: true,
-          mobile: true,
-        },
-      },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+      mobile: true,
     },
   });
-
-  return memberships.map((m) => m.user);
 };
 
 const updateProfile = async (
@@ -173,7 +149,6 @@ const updateProfile = async (
 };
 
 const getAll = async ({ skip = 0, take = 10, search, role }) => {
-  const tenantId = getCurrentTenantId();
   const tenantRoles =
     role === ROLE_TYPES.ADMIN
       ? [TENANT_ROLES.STORE_OWNER, TENANT_ROLES.STORE_STAFF]
@@ -182,86 +157,64 @@ const getAll = async ({ skip = 0, take = 10, search, role }) => {
       : undefined;
 
   const where = {
-    tenantId,
-    ...(tenantRoles ? { role: { in: tenantRoles } } : {}),
+    ...(tenantRoles ? { tenantRole: { in: tenantRoles } } : {}),
     ...(search
       ? {
-          user: {
-            OR: [
-              { email: { contains: search, mode: "insensitive" } },
-              { mobile: { contains: search, mode: "insensitive" } },
-              { name: { contains: search, mode: "insensitive" } },
-            ],
-          },
+          OR: [
+            { email: { contains: search, mode: "insensitive" } },
+            { mobile: { contains: search, mode: "insensitive" } },
+            { name: { contains: search, mode: "insensitive" } },
+          ],
         }
       : {}),
   };
 
-  const [memberships, totalCount] = await Promise.all([
-    rawPrisma.tenantMembership.findMany({
+  const [rows, totalCount] = await Promise.all([
+    prisma.user.findMany({
       where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            mobile: true,
-            status: true,
-            isPlatformAdmin: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        mobile: true,
+        status: true,
+        role: true,
+        tenantRole: true,
+        isPlatformAdmin: true,
+        createdAt: true,
+        updatedAt: true,
       },
       orderBy: { createdAt: "desc" },
       skip,
       take,
     }),
-    rawPrisma.tenantMembership.count({ where }),
+    prisma.user.count({ where }),
   ]);
 
-  const users = memberships.map((m) => ({
-    ...m.user,
+  const users = rows.map((u) => ({
+    ...u,
     role:
-      m.role === TENANT_ROLES.STORE_OWNER || m.role === TENANT_ROLES.STORE_STAFF
+      u.tenantRole === TENANT_ROLES.STORE_OWNER ||
+      u.tenantRole === TENANT_ROLES.STORE_STAFF ||
+      u.role === ROLE_TYPES.ADMIN
         ? ROLE_TYPES.ADMIN
         : ROLE_TYPES.USER,
-    tenantRole: m.role,
   }));
 
   return { users, totalCount };
 };
 
 const changeRole = async ({ id, role }) => {
-  const tenantId = getCurrentTenantId();
-  const targetUser = await rawPrisma.user.findFirst({
-    where: { id, tenantId },
-    select: { id: true },
-  });
-  if (!targetUser) {
-    const err = new Error("User not found");
-    err.statusCode = 404;
-    throw err;
-  }
-
   const targetTenantRole =
     role === ROLE_TYPES.ADMIN ? TENANT_ROLES.STORE_STAFF : TENANT_ROLES.CUSTOMER;
+  const targetRole =
+    role === ROLE_TYPES.ADMIN ? ROLE_TYPES.ADMIN : ROLE_TYPES.USER;
 
-  await rawPrisma.tenantMembership.upsert({
-    where: {
-      tenantId_userId: {
-        tenantId,
-        userId: id,
-      },
-    },
-    create: {
-      tenantId,
-      userId: id,
-      role: targetTenantRole,
-    },
-    update: {
-      role: targetTenantRole,
+  await prisma.user.update({
+    where: { id },
+    data: {
+      role: targetRole,
+      tenantRole: targetTenantRole,
     },
   });
 

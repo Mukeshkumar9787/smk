@@ -72,7 +72,7 @@ const getAdminDashboard = async () => {
     prisma.order.count(),
     prisma.product.count(),
     prisma.product.count({ where: { status: STATUS_TYPES.ACTIVE } }),
-    rawPrisma.tenantMembership.count({ where: { tenantId } }),
+    prisma.user.count(),
     prisma.$queryRaw`
       SELECT
         COALESCE(SUM(stock_qty), 0)::INT AS "stockUnits",
@@ -170,15 +170,14 @@ const getAdminDashboard = async () => {
         u.id,
         u.name,
         u.email,
-        tm."createdAt",
+        u."createdAt",
         COUNT(o.id) FILTER (WHERE o.status IN (${salesStatusesSql}))::INT AS "salesOrders",
         COALESCE(SUM(o."totalAmount") FILTER (WHERE o.status IN (${salesStatusesSql})), 0)::FLOAT AS "totalSpend"
-      FROM "TenantMembership" tm
-      INNER JOIN "User" u ON u.id = tm."userId"
+      FROM "User" u
       LEFT JOIN "Order" o ON o."userId" = u.id AND o."tenantId" = ${tenantId}
-      WHERE tm."tenantId" = ${tenantId}
-      GROUP BY u.id, u.name, u.email, tm."createdAt"
-      ORDER BY tm."createdAt" DESC
+      WHERE u."tenantId" = ${tenantId}
+      GROUP BY u.id, u.name, u.email, u."createdAt"
+      ORDER BY u."createdAt" DESC
       LIMIT 6;
     `,
     prisma.$queryRaw`
