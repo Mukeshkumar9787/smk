@@ -207,7 +207,14 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
       });
       if (!success) return;
       setCompInfo(data?.[CONFIG_KEYS.COMP_INFO] ?? {});
-      setCouriers(data?.[CONFIG_KEYS.COURIER] || []);
+      const rawCouriers = data?.[CONFIG_KEYS.COURIER];
+      setCouriers(
+        Array.isArray(rawCouriers)
+          ? rawCouriers
+          : rawCouriers && typeof rawCouriers === "object" && rawCouriers.name
+          ? [{ name: rawCouriers.name, link: rawCouriers.link || rawCouriers.trackingUrl || "#" }]
+          : []
+      );
     } catch (error) {
       console.error(error);
     }
@@ -234,7 +241,8 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
   const dispute = data?.dispute;
   const courier = data?.additionalInfo?.courier;
   const trackingId = data?.additionalInfo?.trackingId;
-  const courierObj = couriers.find((c) => c.name === courier);
+  const safeCouriers = Array.isArray(couriers) ? couriers : [];
+  const courierObj = safeCouriers.find((c) => c?.name === courier);
   const courierLink = courierObj?.link || "#";
 
   const isDelivered = data?.status === "DELIVERED";

@@ -2,7 +2,8 @@ import { Input } from 'antd'
 import React from 'react'
 
 const CourierDetails = ({ couriers, handleChange, additionalInfo, isAdmin, onSubmit }) => {
-    const link = couriers.find(courier => courier.name === additionalInfo?.courier)?.link || '#';
+    const safeCouriers = Array.isArray(couriers) ? couriers : [];
+    const link = safeCouriers.find(courier => courier?.name === additionalInfo?.courier)?.link || '#';
     return (
         <div className="font-medium text-dark">
             {isAdmin ?
@@ -15,7 +16,7 @@ const CourierDetails = ({ couriers, handleChange, additionalInfo, isAdmin, onSub
                         className="form-input w-full bg-white text-dark"
                     >
                         <option value="">Select Courier</option>
-                        {couriers.map(courier => (
+                        {safeCouriers.map(courier => (
                             <option key={courier.name} value={courier.name}>{courier.name}</option>
                         ))}
                     </select>
