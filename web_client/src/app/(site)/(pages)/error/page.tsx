@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Page Not Found",
-  "The requested page could not be found on SMK."
+  "The requested page could not be found."
 );
 
 const ErrorPage = () => {

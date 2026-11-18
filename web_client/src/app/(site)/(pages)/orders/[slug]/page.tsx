@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Order Details",
-  "View itemized summary, shipping status, and invoice for your SMK order."
+  "View itemized summary, shipping status, and invoice for your order."
 );
 
 const OrdersPage = async ({ params }: { params: Promise<{ slug: string }> }) => {

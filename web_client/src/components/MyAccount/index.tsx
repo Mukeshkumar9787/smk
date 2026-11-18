@@ -8,6 +8,7 @@ import ResetPassword from "../Auth/ResetPassword";
 import Addresses from "./Addresses";
 import { notifySuccess, notifyError } from "@/utils/notify";
 import FileUploader from "../Common/FileUploader";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const MyAccount = () => {
   const [activeTab, setActiveTab] = useState("account-details");
@@ -36,7 +37,7 @@ const MyAccount = () => {
   
   useEffect(()=>{
     if(!getStoredToken()) {
-      window.location.href = '/';
+      window.location.href = withTenantPath('/');
       return
     };
     fetchUserData();

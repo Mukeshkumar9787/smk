@@ -16,6 +16,7 @@ import { ORDER_URL } from "@/utils/appUrls";
 import Policy from "./Policy";
 import { notifyError } from "@/utils/notify";
 import { rateLimitManager } from "@/http/rateLimitManager";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const initialCheckoutValues = {
   name: "",
@@ -233,7 +234,7 @@ const Checkout = () => {
             const onPaymentSuccess = async function (response) {
               const verifyRes = await verifyPayment(response);
               if (verifyRes) {
-                window.location.href = `${ORDER_URL}/${orderResponse.data.orderNo}`
+                window.location.href = withTenantPath(`${ORDER_URL}/${orderResponse.data.orderNo}`);
                 if(verifyRes.success) {
                   dispatch(removeAllItemsFromCart());
                 }

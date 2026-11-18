@@ -7,6 +7,7 @@ import {
 } from "@/redux/features/cart-slice";
 import { AppDispatch, useAppSelector } from "@/redux/store";
 import SingleItem from "./SingleItem";
+import { withTenantPath } from "@/lib/tenantUrl";
 import Link from "next/link";
 import EmptyCart from "./EmptyCart";
 import { STATUS_TYPES } from "@/utils/constants";
@@ -149,7 +150,7 @@ const CartSidebarModal = () => {
               {(productItems.length > 0)
                 ?
                 <Link
-                  href="/checkout"
+                  href={withTenantPath("/checkout")}
                   onClick={() => closeCartModal()}
                   className="btn-primary w-full justify-center"
                 >

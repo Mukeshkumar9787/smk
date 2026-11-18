@@ -1,11 +1,12 @@
 import { getUserInfo } from "@/http/apiCalls";
+import { getTenantStorageKey, withTenantPath } from "@/lib/tenantUrl";
 import { DASHBOARD_URL } from "./appUrls";
 import { ORDER_STATUS } from "./constants";
 import { ROLE_TYPES } from "./constants";
 
 const clearExpiredSession = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("cart");
+  localStorage.removeItem(getTenantStorageKey("token"));
+  localStorage.removeItem(getTenantStorageKey("cart"));
 };
 
 const parseJwtPayload = (token) => {
@@ -37,7 +38,7 @@ export const isTokenExpired = (token) => {
 export const getStoredToken = () => {
   if (typeof window === "undefined") return null;
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(getTenantStorageKey("token"));
   if (!token) return null;
 
   if (isTokenExpired(token)) {
@@ -92,26 +93,27 @@ export const getLoggedInUserData = async () => {
 }
 
 export const afterSucessfullLogin = async (token) => {
-  localStorage.setItem("token", token);
-  const next = localStorage.getItem('next'); 
-  if(next){
-    localStorage.removeItem('next');
+  localStorage.setItem(getTenantStorageKey("token"), token);
+  const nextKey = getTenantStorageKey("next");
+  const next = localStorage.getItem(nextKey);
+  if (next) {
+    localStorage.removeItem(nextKey);
   }
 
   if (next) {
-    window.location.href = next;
+    window.location.href = withTenantPath(next);
     return;
   }
 
   try {
     const user = await getUserInfo();
     if (user?.data?.role === ROLE_TYPES.ADMIN) {
-      window.location.href = DASHBOARD_URL;
+      window.location.href = withTenantPath(DASHBOARD_URL);
       return;
     }
   } catch (error) {}
 
-  window.location.href = '/';
+  window.location.href = withTenantPath('/');
 }
 
 export const getOfferPercent = (mrp, price) => {
@@ -134,21 +136,22 @@ export const getMemberSince = (createdAt) => {
 };
 
 export const logout = () => {
-  localStorage.removeItem('token');
-  window.location.href = '/';
+  localStorage.removeItem(getTenantStorageKey('token'));
+  window.location.href = withTenantPath('/');
 }
 
 export const redirectToSignIn = (next=null) => {
-  // Keep persisted cart/wishlist and only clear auth/session markers.
-  localStorage.removeItem('token');
-  localStorage.removeItem('loginToProceed');
+  // Keep persisted cart/wishlist and only clear auth/session markers for this store.
+  localStorage.removeItem(getTenantStorageKey('token'));
+  localStorage.removeItem(getTenantStorageKey('loginToProceed'));
+  const nextKey = getTenantStorageKey('next');
   if(next){
-    localStorage.setItem("next", next);
+    localStorage.setItem(nextKey, withTenantPath(next));
   }else{
-    localStorage.removeItem('next');
+    localStorage.removeItem(nextKey);
   }
-  localStorage.setItem("loginToProceed", "true");
-  window.location.href = '/signin';
+  localStorage.setItem(getTenantStorageKey("loginToProceed"), "true");
+  window.location.href = withTenantPath('/signin');
 }
 
 export const dateFormatter = (value) => {

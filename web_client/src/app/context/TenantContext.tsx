@@ -1,16 +1,19 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import {
   DEFAULT_TENANT,
   buildThemeCssVariables,
   type PublicTenant,
   type TenantBranding,
 } from "@/lib/theme";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 interface TenantContextValue {
   tenant: PublicTenant;
   branding: TenantBranding;
+  basePath: string;
+  storeHref: (path: string) => string;
   setTenant: React.Dispatch<React.SetStateAction<PublicTenant>>;
   updateBrandingLocally: (partial: Partial<TenantBranding>) => void;
 }
@@ -18,18 +21,23 @@ interface TenantContextValue {
 const TenantContext = createContext<TenantContextValue>({
   tenant: DEFAULT_TENANT,
   branding: DEFAULT_TENANT.branding,
+  basePath: "",
+  storeHref: (path: string) => path,
   setTenant: () => {},
   updateBrandingLocally: () => {},
 });
 
 export function TenantProvider({
   initialTenant = DEFAULT_TENANT,
+  initialBasePath = "",
   children,
 }: {
   initialTenant?: PublicTenant;
+  initialBasePath?: string;
   children: React.ReactNode;
 }) {
   const [tenant, setTenant] = useState<PublicTenant>(initialTenant || DEFAULT_TENANT);
+  const basePath = initialBasePath || "";
 
   useEffect(() => {
     if (initialTenant?.id) {
@@ -37,7 +45,7 @@ export function TenantProvider({
     }
   }, [initialTenant]);
 
-  // Apply live CSS variables to document root whenever branding changes (e.g. in Branding Studio)
+  // Apply live CSS variables to document root whenever branding changes
   useEffect(() => {
     if (typeof document === "undefined") return;
     const vars = buildThemeCssVariables(tenant.branding);
@@ -46,6 +54,11 @@ export function TenantProvider({
       root.style.setProperty(key, val);
     }
   }, [tenant.branding]);
+
+  const storeHref = useCallback(
+    (path: string) => withTenantPath(path, basePath),
+    [basePath]
+  );
 
   const updateBrandingLocally = (partial: Partial<TenantBranding>) => {
     setTenant((prev) => ({
@@ -63,6 +76,8 @@ export function TenantProvider({
       value={{
         tenant,
         branding: tenant.branding,
+        basePath,
+        storeHref,
         setTenant,
         updateBrandingLocally,
       }}

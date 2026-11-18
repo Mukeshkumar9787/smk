@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Shopping Cart",
-  "Review items in your SMK shopping cart before checkout."
+  "Review items in your shopping cart before checkout."
 );
 
 const CartPage = () => {

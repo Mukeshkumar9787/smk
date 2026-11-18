@@ -10,8 +10,10 @@ import { ORDER_URL } from "@/utils/appUrls";
 import { ExportOutlined } from "@ant-design/icons";
 import StatusTags from "./StatusTags";
 import { getCurrencyDetails, getShippingDisplay } from "@/utils/helper";
+import { useTenant } from "@/app/context/TenantContext";
 
 const AdminOrders = () => {
+  const { storeHref } = useTenant();
   const [orderItems, setOrderItems] = React.useState([]);
   const [totalCount, setTotalCount] = React.useState(0);
   const [pagination, setPagination] = React.useState({ pageNumber: 1, pageSize: 10});
@@ -137,7 +139,7 @@ const AdminOrders = () => {
       render: (orderNo) => {
         return(
           <Link
-            href={ORDER_URL + `/${orderNo}`}
+            href={storeHref(ORDER_URL + `/${orderNo}`)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-3 text-dark hover:border-blue hover:text-blue transition"
           >
             <ExportOutlined size={20}/>
@@ -192,7 +194,7 @@ const AdminOrders = () => {
                         <h3 className="text-base font-semibold text-dark">#{item.orderNo}</h3>
                         <p className="truncate text-sm text-dark-4">{item.user?.name || "-"}</p>
                       </div>
-                      <Link href={ORDER_URL + `/${item.orderNo}`} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-3 text-dark transition hover:border-blue hover:text-blue">
+                      <Link href={storeHref(ORDER_URL + `/${item.orderNo}`)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-3 text-dark transition hover:border-blue hover:text-blue">
                         <ExportOutlined />
                       </Link>
                     </div>

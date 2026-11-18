@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Reset Password",
-  "Reset your SMK account password securely."
+  "Reset your account password securely."
 );
 
 const ResetPasswordPage = () => {

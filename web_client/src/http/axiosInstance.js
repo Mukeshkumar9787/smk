@@ -1,4 +1,5 @@
 import { getStoredToken, redirectToSignIn } from '@/utils/helper';
+import { getClientTenantSlug, stripTenantPrefix } from '@/lib/tenantUrl';
 import axios from 'axios';
 import { message } from 'antd';
 import { decrementGetRequest, incrementGetRequest } from './apiLoader';
@@ -17,12 +18,6 @@ const axiosInstance = axios.create({
 
 let globalRequestId = 0;
 
-function readTenantCookie() {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)smk_tenant_slug=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 axiosInstance.interceptors.request.use((config) => {
   try {
     const token = getStoredToken();
@@ -30,7 +25,7 @@ axiosInstance.interceptors.request.use((config) => {
       config.headers.authorization = `Bearer ${token}`; // eslint-disable-line
     }
     if (typeof window !== "undefined") {
-      const tenantSlug = readTenantCookie();
+      const tenantSlug = getClientTenantSlug();
       if (tenantSlug && !config.headers["x-tenant-slug"]) {
         config.headers["x-tenant-slug"] = tenantSlug;
       }
@@ -177,7 +172,7 @@ axiosInstance.interceptors.response.use((response) => {
     }
 
     if (error.response && error.response.status === 401) {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/signin') {
+      if (typeof window !== 'undefined' && stripTenantPrefix(window.location.pathname) !== '/signin') {
         redirectToSignIn();
       }
     } else {

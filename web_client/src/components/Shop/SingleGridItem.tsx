@@ -7,9 +7,11 @@ import { addItemToWishlist } from "@/redux/features/wishlist-slice";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
+import { useTenant } from "@/app/context/TenantContext";
 
 const SingleGridItem = ({ item }: { item: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const { storeHref } = useTenant();
 
   // update the QuickView state
   const handleQuickViewUpdate = () => {
@@ -99,7 +101,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
       </div>
 
       <h3 className="font-medium text-dark ease-out duration-200 hover:text-blue mb-1.5">
-        <Link href={`/shop-details/${item.slug}`}> {item.title} </Link>
+        <Link href={storeHref(`/shop-details/${item.slug}`)}> {item.title} </Link>
       </h3>
 
       <span className="flex items-center gap-2 font-medium text-lg">

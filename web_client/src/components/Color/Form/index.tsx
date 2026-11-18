@@ -8,6 +8,7 @@ import { COLOR_URL } from "@/utils/appUrls";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { confirmAction } from "@/utils/notify";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const ColorForm = ({ params }) => {
   const router = useRouter();
@@ -36,7 +37,7 @@ const ColorForm = ({ params }) => {
         : await updateColor({ title, code, status, id: editDataRef.current.id });
 
       if(response.success){
-         router.replace(COLOR_URL);
+         router.replace(withTenantPath(COLOR_URL));
       }
     } catch (err) {
       console.error(err);
@@ -56,7 +57,7 @@ const ColorForm = ({ params }) => {
     if(!isNew){
       let response = await deleteColor({id: editDataRef.current.id})
       if(response.success){
-         router.replace(COLOR_URL);
+         router.replace(withTenantPath(COLOR_URL));
       }
     }
   };

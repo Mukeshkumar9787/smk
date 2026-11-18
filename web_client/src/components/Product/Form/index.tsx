@@ -10,6 +10,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { Select } from "antd";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/notify";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const ProductForm = ({ params }) => {
   const router = useRouter();
@@ -122,7 +123,7 @@ const ProductForm = ({ params }) => {
         : await updateProduct({...data, id: editDataRef.current.id, oldStockQty: editDataRef.current.stock });
 
       if(response.success){
-        router.replace(PRODUCT_URL);
+        router.replace(withTenantPath(PRODUCT_URL));
       }else{
         let currentStock = response.data.currentStockQty;
         setStock(currentStock);
@@ -146,7 +147,7 @@ const ProductForm = ({ params }) => {
     if(!isNew){
       let response = await deleteProduct({id: editDataRef.current.id})
       if(response.success){
-         router.replace(PRODUCT_URL);
+         router.replace(withTenantPath(PRODUCT_URL));
       }
     }
   };

@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Page Not Found",
-  "The page you requested could not be found on SMK."
+  "The page you requested could not be found."
 );
 
 export default function NotFound() {

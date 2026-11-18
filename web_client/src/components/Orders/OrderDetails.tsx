@@ -33,6 +33,7 @@ const OrderInvoiceComponent: any = OrderInvoice;
 import { useReactToPrint } from "react-to-print";
 import CourierDetails from "./CourierDetails";
 import { notifyError, notifySuccess } from "@/utils/notify";
+import { useTenant } from "@/app/context/TenantContext";
 
 const formatStatusLabel = (value: string) => value?.replaceAll("_", " ");
 
@@ -60,6 +61,7 @@ const getStageIndex = (status: string) => {
 };
 
 const OrderDetails = ({ params, orderNo, orderItem }: any) => {
+  const { branding, storeHref } = useTenant();
   const targetParams = params || { slug: orderNo || orderItem?.orderNo || orderItem?.slug };
   const [data, setData] = useState<any>(null);
   const [statusInfo, setStatusInfo] = useState<any>(null);
@@ -250,15 +252,15 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
         {/* Flipkart Breadcrumbs */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[#878787]">
           <div className="flex items-center gap-1.5">
-            <Link href="/" className="hover:text-[#2874f0]">
+            <Link href={storeHref("/")} className="hover:text-[#2874f0]">
               Home
             </Link>
             <span>›</span>
-            <Link href="/my-account" className="hover:text-[#2874f0]">
+            <Link href={storeHref("/my-account")} className="hover:text-[#2874f0]">
               My Account
             </Link>
             <span>›</span>
-            <Link href={ORDER_URL} className="hover:text-[#2874f0]">
+            <Link href={storeHref(ORDER_URL)} className="hover:text-[#2874f0]">
               My Orders
             </Link>
             <span>›</span>
@@ -266,7 +268,7 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
           </div>
 
           <Link
-            href={ORDER_URL}
+            href={storeHref(ORDER_URL)}
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#2874f0] hover:underline"
           >
             <span>‹ Back to My Orders</span>
@@ -334,7 +336,7 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
                 {productItems.map((product: any) => (
                   <div key={product.id || product.slug} className="flex items-start gap-4">
                     <Link
-                      href={`${SHOP_DETAILS}/${product.slug}`}
+                      href={storeHref(`${SHOP_DETAILS}/${product.slug}`)}
                       className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm border border-gray-100 bg-white p-1"
                     >
                       <img
@@ -346,14 +348,14 @@ const OrderDetails = ({ params, orderNo, orderItem }: any) => {
 
                     <div className="min-w-0 flex-1">
                       <Link
-                        href={`${SHOP_DETAILS}/${product.slug}`}
+                        href={storeHref(`${SHOP_DETAILS}/${product.slug}`)}
                         className="block font-medium text-sm text-[#212121] transition hover:text-[#2874f0] line-clamp-2"
                       >
                         {product.title}
                       </Link>
 
                       <div className="mt-1 flex items-center gap-2 text-xs text-[#878787]">
-                        <span>Seller: SMK Retail</span>
+                        <span>Seller: {branding?.storeName || compInfo?.name || "Verified Store"}</span>
                         <span className="inline-flex items-center rounded-xs bg-blue-50 px-1 text-[10px] font-bold text-[#2874f0]">
                           ✓ Verified
                         </span>

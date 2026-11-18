@@ -8,6 +8,7 @@ import { HSN_URL } from "@/utils/appUrls";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { confirmAction } from "@/utils/notify";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const HsnForm = ({ params }) => {
   const router = useRouter();
@@ -36,7 +37,7 @@ const HsnForm = ({ params }) => {
         : await updateHsn({ code, status, id: editDataRef.current.id, tax });
 
       if(response.success){
-         router.replace(HSN_URL);
+         router.replace(withTenantPath(HSN_URL));
       }
     } catch (err) {
       console.error(err);
@@ -56,7 +57,7 @@ const HsnForm = ({ params }) => {
     if(!isNew){
       let response = await deleteHsn({id: editDataRef.current.id})
       if(response.success){
-         router.replace(HSN_URL);
+         router.replace(withTenantPath(HSN_URL));
       }
     }
   };

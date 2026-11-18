@@ -10,6 +10,7 @@ import WishlistButton from "../Common/WishlistButton";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/notify";
 import { useRouter } from "next/navigation";
 import { STATUS_TYPES } from "@/utils/constants";
+import { useTenant } from "@/app/context/TenantContext";
 
 const renderStars = (rating = 0, size = 18) => {
   const rounded = Math.round(rating);
@@ -34,6 +35,7 @@ const renderStars = (rating = 0, size = 18) => {
 
 const ShopDetails = ({ params, initialProduct = null, initialReviews = [] }) => {
   const router = useRouter();
+  const { storeHref } = useTenant();
   const [product, setProduct] = useState(initialProduct);
   const [previewImg, setPreviewImg] = useState(0);
   const [reviews, setReviews] = useState(initialReviews);
@@ -47,7 +49,7 @@ const ShopDetails = ({ params, initialProduct = null, initialReviews = [] }) => 
   const hasHydratedInitialReviews = useRef(Boolean(initialProduct));
 
   const handleNotFound = () => {
-    router.replace("/404");
+    router.replace(storeHref("/404"));
   };
 
   const fetchProduct = async () => {
@@ -246,13 +248,13 @@ const ShopDetails = ({ params, initialProduct = null, initialReviews = [] }) => 
               <nav aria-label="Breadcrumb" className="mb-6 text-sm text-dark-4">
                 <ol className="flex flex-wrap items-center gap-2">
                   <li>
-                    <Link href="/" className="hover:text-blue transition">
+                    <Link href={storeHref("/")} className="hover:text-blue transition">
                       Home
                     </Link>
                   </li>
                   <li aria-hidden="true">/</li>
                   <li>
-                    <Link href="/shop" className="hover:text-blue transition">
+                    <Link href={storeHref("/shop")} className="hover:text-blue transition">
                       Shop
                     </Link>
                   </li>

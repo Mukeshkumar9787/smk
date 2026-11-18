@@ -4,6 +4,7 @@ import Link from "next/link";
 import React from "react";
 import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { ROLE_TYPES } from "@/utils/constants";
+import { useTenant } from "@/app/context/TenantContext";
 
 const PATH_BY_LABEL = {
   "shop": "/shop",
@@ -53,6 +54,7 @@ const Breadcrumb = ({
   className = "",
   tone = "default",
 }) => {
+  const { storeHref } = useTenant();
   const [canRender, setCanRender] = React.useState(false);
 
   React.useEffect(() => {
@@ -86,16 +88,18 @@ const Breadcrumb = ({
   const isInline = variant === "inline";
   const isLightTone = tone === "light";
   const rootLabel = adminOnly ? "Dashboard" : "Home";
-  const rootHref = adminOnly ? "/dashboard" : "/";
+  const rootHref = storeHref(adminOnly ? "/dashboard" : "/");
 
   const breadcrumbPages = (pages || [])
     .map((page) => {
       if (typeof page === "string") {
-        return { label: normalizeLabel(page), href: getHrefForLabel(page) };
+        const rawHref = getHrefForLabel(page);
+        return { label: normalizeLabel(page), href: rawHref ? storeHref(rawHref) : "" };
       }
+      const rawHref = page?.href || getHrefForLabel(page?.label || "");
       return {
         label: normalizeLabel(page?.label || ""),
-        href: page?.href || getHrefForLabel(page?.label || ""),
+        href: rawHref ? storeHref(rawHref) : "",
       };
     })
     .filter((page) => page.label);

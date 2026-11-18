@@ -1,9 +1,14 @@
 import Link from "next/link";
 import ProductItem from "@/components/Common/ProductItem";
 import { fetchActiveProductsServer } from "@/lib/seoServer";
+import { getServerTenantBasePath } from "@/lib/tenantServer";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const NewArrival = async () => {
-  const { products: shopData } = await fetchActiveProductsServer({ pageSize: 8 }, 120);
+  const [{ products: shopData }, basePath] = await Promise.all([
+    fetchActiveProductsServer({ pageSize: 8 }, 120),
+    getServerTenantBasePath(),
+  ]);
   return (
     <section className="overflow-hidden bg-transparent pb-18 pt-10 sm:pt-12">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -42,7 +47,7 @@ const NewArrival = async () => {
             </div>
 
             <Link
-              href="/shop"
+              href={withTenantPath("/shop", basePath)}
               className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-semibold text-dark shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
             >
               View All Products

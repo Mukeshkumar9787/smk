@@ -2,9 +2,12 @@
 import React from "react";
 import { getConfig } from "@/http/apiCalls";
 import { CONFIG_KEYS } from "@/utils/constants";
+import { useTenant } from "@/app/context/TenantContext";
 
 const Contact = ({ initialCompInfo = null }: { initialCompInfo?: Record<string, any> | null } = {}) => {
+  const { branding } = useTenant();
   const [compInfo, setCompInfo] = React.useState(initialCompInfo || {});
+  const storeName = branding?.storeName || compInfo?.name || "our";
 
   const fetchConfig = React.useCallback(async () => {
     try {
@@ -99,10 +102,10 @@ const Contact = ({ initialCompInfo = null }: { initialCompInfo?: Record<string, 
                   Let’s Talk
                 </span>
                 <h1 className="mt-4 max-w-[560px] text-3xl font-semibold tracking-tight text-dark sm:text-4xl xl:text-[44px] xl:leading-[1.05]">
-                  Reach out for product questions, orders, or custom print requests.
+                  Reach out for product questions, orders, or support requests.
                 </h1>
                 <p className="mt-4 max-w-[560px] text-base leading-7 text-dark-4">
-                  Get in touch with the SMK team for quick assistance. We are available to help with catalog guidance, availability, and project-specific inquiries.
+                  Get in touch with the {storeName} team for quick assistance. We are available to help with catalog guidance, availability, and order inquiries.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">

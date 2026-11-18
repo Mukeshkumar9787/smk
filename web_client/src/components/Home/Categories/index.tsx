@@ -8,8 +8,10 @@ import "swiper/css";
 import SingleItem from "./SingleItem";
 import { getCategories } from "@/http/apiCalls";
 import { STATUS_TYPES } from "@/utils/constants";
+import { useTenant } from "@/app/context/TenantContext";
 
 const Categories = ({ initialCategories = [] }: { initialCategories?: any[] }) => {
+  const { storeHref } = useTenant();
   const [data, setData] = useState(initialCategories);
   const sliderRef = useRef(null);
 
@@ -170,7 +172,7 @@ const Categories = ({ initialCategories = [] }: { initialCategories?: any[] }) =
                 <SwiperSlide key={item.id || item.slug || key}>
                   <SingleItem
                     item={item}
-                    href={`/shop?category=${encodeURIComponent(item.slug)}`}
+                    href={storeHref(`/shop?category=${encodeURIComponent(item.slug)}`)}
                   />
                 </SwiperSlide>
               ))}

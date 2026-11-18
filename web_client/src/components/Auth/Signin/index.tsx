@@ -9,8 +9,11 @@ import { getAlertContent, PASSWORD_REGEX } from "@/utils/constants";
 import GoogleLoginButton from "../GoogleLoginButton";
 import TurnstileWidget, { TurnstileRef } from "@/components/Common/TurnstileWidget";
 import { rateLimitManager } from "@/http/rateLimitManager";
+import { useTenant } from "@/app/context/TenantContext";
+import { getTenantStorageKey } from "@/lib/tenantUrl";
 
 const Signin = () => {
+  const { storeHref } = useTenant();
   const [alert, setAlert] = useState(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
@@ -25,8 +28,9 @@ const Signin = () => {
   }, []);
   
   useEffect(() => {
-    let next = localStorage.getItem('loginToProceed'); 
-    localStorage.removeItem('loginToProceed'); 
+    const loginKey = getTenantStorageKey("loginToProceed");
+    let next = localStorage.getItem(loginKey);
+    localStorage.removeItem(loginKey);
     if(next){
       setAlert('loginToProceed');
     }
@@ -141,14 +145,14 @@ const Signin = () => {
                 </div>
 
                 <Link
-                  href="/signin-otp"
+                  href={storeHref("/signin-otp")}
                   className="block text-center text-dark-4 mt-4.5 ease-out duration-200 hover:text-dark"
                 >
                   Signin&nbsp;with&nbsp;OTP
                 </Link>
 
                 <Link
-                  href="/reset-password"
+                  href={storeHref("/reset-password")}
                   className="block text-center text-dark-4 mt-4.5 ease-out duration-200 hover:text-dark"
                 >
                   Forget your password?
@@ -158,7 +162,7 @@ const Signin = () => {
                 <p className="text-center mt-6">
                   Don&apos;t have an account?
                   <Link
-                    href="/signup"
+                    href={storeHref("/signup")}
                     className="text-dark ease-out duration-200 hover:text-blue pl-2"
                     >
                     Sign Up Now!

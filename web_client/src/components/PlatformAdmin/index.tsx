@@ -292,7 +292,8 @@ export default function PlatformAdmin() {
                     <td className="px-5 py-4 text-right">
                       <div className="inline-flex items-center gap-2">
                         <a
-                          href={t.isDefault ? "/?tenant=smk" : `/s/${t.slug}`}
+                          href={t.isDefault ? "/" : `/s/${t.slug}`}
+                          data-no-tenant-prefix="true"
                           className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-dark hover:border-blue hover:text-blue"
                         >
                           Open Store

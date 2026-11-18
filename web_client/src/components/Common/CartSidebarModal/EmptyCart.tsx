@@ -1,9 +1,11 @@
 import React from "react";
 import Link from "next/link";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
+import { useTenant } from "@/app/context/TenantContext";
 
 const EmptyCart = () => {
   const { closeCartModal } = useCartModalContext();
+  const { storeHref } = useTenant();
 
   return (
     <div className="rounded-[26px] border border-dashed border-slate-200 bg-white px-5 py-8 text-center">
@@ -45,7 +47,7 @@ const EmptyCart = () => {
 
       <Link
         onClick={() => closeCartModal()}
-        href="/shop"
+        href={storeHref("/shop")}
         className="btn-primary mx-auto inline-flex w-full justify-center lg:w-10/12"
       >
         Continue Shopping

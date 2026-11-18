@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import ShopDetails from "@/components/ShopDetails";
 import JsonLd from "@/components/Common/JsonLd";
 import {
-  SITE_NAME,
   buildBreadcrumbJsonLd,
   buildNoIndexMetadata,
   buildProductJsonLd,
@@ -16,6 +15,11 @@ import {
   fetchProductBySlugServer,
   fetchProductReviewsServer,
 } from "@/lib/seoServer";
+import {
+  fetchCurrentTenantServer,
+  fetchTenantResolutionServer,
+  getServerTenantBasePath,
+} from "@/lib/tenantServer";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +35,24 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const [{ slug }, { tenant, errorCode }, basePath] = await Promise.all([
+    params,
+    fetchTenantResolutionServer(),
+    getServerTenantBasePath(),
+  ]);
+  if (errorCode) {
+    return {
+      title: errorCode === "TENANT_SUSPENDED" ? "Store Unavailable" : "Store Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
+  const storeName = tenant?.branding?.storeName || "SMK";
   const { product, notFound: isNotFound } = await fetchProductBySlugServer(slug);
 
   if (isNotFound) {
     return buildNoIndexMetadata(
       "Product Not Found",
-      `This product is no longer available on ${SITE_NAME}.`
+      `This product is no longer available on ${storeName}.`
     );
   }
 
@@ -45,8 +60,9 @@ export async function generateMetadata({
     const fallbackTitle = humanizeSlug(slug) || "Product Details";
     return buildPublicMetadata({
       title: fallbackTitle,
-      description: `Shop ${fallbackTitle} online at ${SITE_NAME} with transparent pricing and secure checkout.`,
-      path: `/shop-details/${encodeURIComponent(slug)}`,
+      description: `Shop ${fallbackTitle} online at ${storeName} with transparent pricing and secure checkout.`,
+      path: `${basePath}/shop-details/${encodeURIComponent(slug)}`,
+      siteName: storeName,
     });
   }
 
@@ -54,18 +70,19 @@ export async function generateMetadata({
   const priceText = `₹${product.price}`;
   const description = truncateDescription(
     product.description ||
-      `Buy ${product.title} online at ${SITE_NAME} for ${priceText}. Check real-time stock, ratings, and order securely.`,
+      `Buy ${product.title} online at ${storeName} for ${priceText}. Check real-time stock, ratings, and order securely.`,
     155
   );
 
   return buildPublicMetadata({
     title: product.title,
     description,
-    path: `/shop-details/${encodeURIComponent(product.slug)}`,
+    path: `${basePath}/shop-details/${encodeURIComponent(product.slug)}`,
+    siteName: storeName,
     images: imageUrls.map((url) => ({ url, alt: product.title })),
     keywords: [
       product.title,
-      SITE_NAME,
+      storeName,
       ...(product.sizeTitle ? [`${product.title} ${product.sizeTitle}`] : []),
       "buy online",
     ],
@@ -77,7 +94,12 @@ const ShopDetailsPage = async ({
 }: {
   params: Promise<{ slug: string }>;
 }) => {
-  const resolvedParams = await params;
+  const [resolvedParams, tenant, basePath] = await Promise.all([
+    params,
+    fetchCurrentTenantServer(),
+    getServerTenantBasePath(),
+  ]);
+  const storeName = tenant?.branding?.storeName || "SMK";
   const { product, notFound: isNotFound } = await fetchProductBySlugServer(
     resolvedParams.slug
   );
@@ -94,14 +116,19 @@ const ShopDetailsPage = async ({
     <>
       {product && (
         <>
-          <JsonLd data={buildProductJsonLd(product, initialReviews)} />
+          <JsonLd
+            data={buildProductJsonLd(product, initialReviews, {
+              siteName: storeName,
+              basePath,
+            })}
+          />
           <JsonLd
             data={buildBreadcrumbJsonLd([
-              { name: "Home", path: "/" },
-              { name: "Shop", path: "/shop" },
+              { name: "Home", path: basePath || "/" },
+              { name: "Shop", path: `${basePath}/shop` },
               {
                 name: product.title,
-                path: `/shop-details/${encodeURIComponent(product.slug)}`,
+                path: `${basePath}/shop-details/${encodeURIComponent(product.slug)}`,
               },
             ])}
           />

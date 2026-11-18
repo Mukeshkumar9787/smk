@@ -9,6 +9,7 @@ import { CATEGORY_URL } from "@/utils/appUrls";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { confirmAction, notifyError } from "@/utils/notify";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const CategoryForm = ({ params }) => {
   const router = useRouter();
@@ -60,7 +61,7 @@ const CategoryForm = ({ params }) => {
         : await updateCategory({ title, status, ...filePayload, id: editDataRef.current.id });
 
       if(response.success){
-        router.replace(CATEGORY_URL);
+        router.replace(withTenantPath(CATEGORY_URL));
       }
     } catch (err) {
       console.error(err);
@@ -81,7 +82,7 @@ const CategoryForm = ({ params }) => {
     if(!isNew){
       let response = await deleteCategory({id: editDataRef.current.id})
       if(response.success){
-         router.replace(CATEGORY_URL);
+         router.replace(withTenantPath(CATEGORY_URL));
       }
     }
   };

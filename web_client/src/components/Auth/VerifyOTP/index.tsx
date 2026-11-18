@@ -6,6 +6,7 @@ import ResendButton from "../../Common/ResendButton";
 import { afterSucessfullLogin } from "@/utils/helper";
 import { VERIFY_OTP_TYPES } from "@/utils/constants";
 import { notifySuccess } from "@/utils/notify";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const VerifyOTP = ({ type, sentTo=null, isOpen, onClose, resendOtp=null, nestedForm=false }) => {
   const router = useRouter();
@@ -22,7 +23,7 @@ const VerifyOTP = ({ type, sentTo=null, isOpen, onClose, resendOtp=null, nestedF
             if(nestedForm){
               onClose(true);
             }else{
-              router.push('/signin');
+              router.push(withTenantPath('/signin'));
             }
           }else{
             afterSucessfullLogin(response.data.token);

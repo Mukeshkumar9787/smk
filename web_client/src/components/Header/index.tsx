@@ -12,13 +12,20 @@ import Image from "next/image";
 import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { CONFIG_KEYS, ROLE_TYPES, STATUS_TYPES } from "@/utils/constants";
 import { getConfig, getProducts } from "@/http/apiCalls";
-import { PLATFORM_ADMIN_URL, SHOP_DETAILS } from "@/utils/appUrls";
+import { LAUNCH_STORE_URL, PLATFORM_ADMIN_URL, SHOP_DETAILS } from "@/utils/appUrls";
 import type { Product } from "@/types/product";
 
 const Header = () => {
   const router = useRouter();
-  const { branding, tenant } = useTenant();
-  const [menuItems, setMenuItems] = useState(menuData);
+  const { branding, tenant, storeHref } = useTenant();
+  const publicMenuData = React.useMemo(
+    () =>
+      tenant?.isDefault
+        ? menuData
+        : menuData.filter((item) => item.path !== LAUNCH_STORE_URL),
+    [tenant?.isDefault]
+  );
+  const [menuItems, setMenuItems] = useState(publicMenuData);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const navRef = React.useRef<HTMLDivElement | null>(null);
   const navToggleRef = React.useRef<HTMLButtonElement | null>(null);
@@ -70,7 +77,7 @@ const Header = () => {
   useEffect(() => {
     if (!getStoredToken()) {
       setUser(null);
-      setMenuItems(menuData);
+      setMenuItems(publicMenuData);
       return;
     }
     const fetchUser = async () => {
@@ -81,32 +88,33 @@ const Header = () => {
           userData.role === ROLE_TYPES.ADMIN
             ? adminMenuData.map((group) => ({
                 ...group,
-                submenu: userData.isPlatformAdmin
-                  ? [
-                      {
-                        title: "Super Admin",
-                        newTab: false,
-                        path: PLATFORM_ADMIN_URL,
-                      },
-                      ...(group.submenu || []),
-                    ]
-                  : group.submenu,
+                submenu:
+                  userData.isPlatformAdmin && tenant?.isDefault
+                    ? [
+                        {
+                          title: "Super Admin",
+                          newTab: false,
+                          path: PLATFORM_ADMIN_URL,
+                        },
+                        ...(group.submenu || []),
+                      ]
+                    : group.submenu,
               }))
             : [];
         const authedMenu = [
-          ...menuData.filter((item) => item.path !== "/contact"),
+          ...publicMenuData.filter((item) => item.path !== "/contact"),
           ...userMenuData,
           ...resolvedAdminMenu,
-          ...menuData.filter((item) => item.path === "/contact"),
+          ...publicMenuData.filter((item) => item.path === "/contact"),
         ];
         setMenuItems(authedMenu);
       } else {
         setUser(null);
-        setMenuItems(menuData);
+        setMenuItems(publicMenuData);
       }
     };
     fetchUser();
-  }, [pathname]);
+  }, [pathname, publicMenuData, tenant?.isDefault]);
 
   useEffect(() => {
     if (!navigationOpen) return;
@@ -183,7 +191,7 @@ const Header = () => {
     setSearchQuery("");
     setSearchResults([]);
     setShowSearchSuggestions(false);
-    router.push(`${SHOP_DETAILS}/${slug}`);
+    router.push(storeHref(`${SHOP_DETAILS}/${slug}`));
   };
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -274,7 +282,7 @@ const Header = () => {
         >
           {/* <!-- header top left --> */}
           <div className="flex min-w-0 items-center gap-3">
-            <Link className="flex-shrink-0" href="/">
+            <Link className="flex-shrink-0" href={storeHref("/")}>
               {branding?.logoUrl ? (
                 <img
                   src={branding.logoUrl}
@@ -323,7 +331,7 @@ const Header = () => {
                         className="group relative"
                       >
                         <Link
-                          href={menuItem.path}
+                          href={storeHref(menuItem.path)}
                           onClick={() => setNavigationOpen(false)}
                           className="flex w-full items-center rounded-md text-left text-custom-sm font-medium text-dark hover:text-blue xl:min-h-[44px] xl:w-auto"
                         >
@@ -402,7 +410,7 @@ const Header = () => {
                 </button>
                 {user ? (
                   <Link
-                    href="/my-account"
+                    href={storeHref("/my-account")}
                     title="Go to My Account"
                     className="group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 p-1 sm:pr-3 shadow-2xs hover:border-sky-400 hover:bg-slate-50 hover:shadow-sm transition-all duration-200 cursor-pointer"
                   >
@@ -441,7 +449,7 @@ const Header = () => {
                   </Link>
                 ) : (
                   <Link
-                    href="/signin"
+                    href={storeHref("/signin")}
                     title="Sign In to your account"
                     className="group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 px-3 py-1.5 shadow-2xs hover:border-sky-400 hover:bg-slate-50 hover:shadow-sm transition-all duration-200 cursor-pointer"
                   >

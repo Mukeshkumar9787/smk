@@ -8,6 +8,7 @@ import { SIZE_URL } from "@/utils/appUrls";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { confirmAction } from "@/utils/notify";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const SizeForm = ({ params }) => {
   const router = useRouter();
@@ -35,7 +36,7 @@ const SizeForm = ({ params }) => {
         : await updateSize({ title, status, id: editDataRef.current.id });
 
       if(response.success){
-         router.replace(SIZE_URL);
+         router.replace(withTenantPath(SIZE_URL));
       }
     } catch (err) {
       console.error(err);
@@ -55,7 +56,7 @@ const SizeForm = ({ params }) => {
     if(!isNew){
       let response = await deleteSize({id: editDataRef.current.id})
       if(response.success){
-         router.replace(SIZE_URL);
+         router.replace(withTenantPath(SIZE_URL));
       }
     }
   };

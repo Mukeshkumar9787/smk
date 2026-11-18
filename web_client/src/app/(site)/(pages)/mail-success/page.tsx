@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Message Sent",
-  "Your message has been sent to the SMK team."
+  "Your message has been sent to our support team."
 );
 
 const MailSuccessPage = () => {

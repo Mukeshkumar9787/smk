@@ -5,11 +5,13 @@ import { AppDispatch } from "@/redux/store";
 import { getCurrencyDetails } from "@/utils/helper";
 import AddToCart from "../AddToCart";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
+import { useTenant } from "@/app/context/TenantContext";
 import { Popconfirm } from "antd";
 
 const SingleItem = ({ item, removeItemFromCart }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { closeCartModal } = useCartModalContext();
+  const { storeHref } = useTenant();
 
   const handleRemoveFromCart = () => {
     dispatch(removeItemFromCart(item.id));
@@ -20,7 +22,7 @@ const SingleItem = ({ item, removeItemFromCart }) => {
       <div className="flex items-start justify-between gap-4">
         <div className="flex w-full items-start gap-4">
           <Link
-            href={`/shop-details/${item.slug}`}
+            href={storeHref(`/shop-details/${item.slug}`)}
             onClick={closeCartModal}
             className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-[20px] bg-slate-100"
           >
@@ -29,7 +31,7 @@ const SingleItem = ({ item, removeItemFromCart }) => {
 
           <div className="min-w-0 flex-1">
             <Link
-              href={`/shop-details/${item.slug}`}
+              href={storeHref(`/shop-details/${item.slug}`)}
               onClick={closeCartModal}
               className="block truncate font-semibold text-dark transition hover:text-blue"
             >

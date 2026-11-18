@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Wishlist",
-  "View and manage your saved favorite products on SMK."
+  "View and manage your saved favorite products."
 );
 
 const WishlistPage = () => {

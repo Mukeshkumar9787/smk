@@ -6,6 +6,7 @@ import { getCurrencyDetails } from "@/utils/helper";
 import AddToCart from "./AddToCart";
 import AvailableStock from "./AvailableStock";
 import WishlistButton from "./WishlistButton";
+import { useTenant } from "@/app/context/TenantContext";
 
 const renderStars = (rating = 0, size = 14) => {
   const rounded = Math.round(rating);
@@ -30,12 +31,13 @@ const renderStars = (rating = 0, size = 14) => {
 };
 
 const ProductItem = ({ item }: { item: Product }) => {
+  const { storeHref } = useTenant();
   const discount = item?.mrp > item?.price ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0;
   const reviewCount = Number(item?.reviewCount || 0);
 
   return (
     <div className="group surface-card flex h-full flex-col justify-between overflow-hidden p-3 sm:p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-      <Link href={`/shop-details/${item.slug}`} className="flex flex-1 flex-col">
+      <Link href={storeHref(`/shop-details/${item.slug}`)} className="flex flex-1 flex-col">
         {/* Uniform square image container */}
         <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-gray-1 flex items-center justify-center p-3">
           <img

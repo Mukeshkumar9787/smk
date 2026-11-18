@@ -6,8 +6,10 @@ import AdminOrders from "@/components/AdminOrders";
 import { getLoggedInUserData, getStoredToken, redirectToSignIn } from "@/utils/helper";
 import { ROLE_TYPES } from "@/utils/constants";
 import Link from "next/link";
+import { useTenant } from "@/app/context/TenantContext";
 
 export default function OrdersHub() {
+  const { storeHref } = useTenant();
   const [user, setUser] = useState<any>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [adminViewMode, setAdminViewMode] = useState<"customer" | "admin">("customer");
@@ -68,13 +70,13 @@ export default function OrdersHub() {
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <Link
-                href="/signin"
+                href={storeHref("/signin")}
                 className="rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
               >
                 Sign in to Account
               </Link>
               <Link
-                href="/shop"
+                href={storeHref("/shop")}
                 className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Explore Store

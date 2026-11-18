@@ -4,6 +4,11 @@ import {
   fetchActiveCategoriesServer,
   fetchAllActiveProductsServer,
 } from "@/lib/seoServer";
+import {
+  fetchCurrentTenantServer,
+  getServerTenantBasePath,
+} from "@/lib/tenantServer";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -14,32 +19,41 @@ const SITEMAP_FETCH_OPTIONS = {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const [tenant, basePath] = await Promise.all([
+    fetchCurrentTenantServer(),
+    getServerTenantBasePath(),
+  ]);
+  const fullUrl = (path: string) => `${SITE_URL}${withTenantPath(path, basePath)}`;
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: `${SITE_URL}/`,
+      url: fullUrl("/"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: `${SITE_URL}/shop`,
+      url: fullUrl("/shop"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${SITE_URL}/contact`,
+      url: fullUrl("/contact"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
     },
-    {
-      url: `${SITE_URL}/launch`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+    ...(tenant?.isDefault && !basePath
+      ? [
+          {
+            url: `${SITE_URL}/launch`,
+            lastModified: now,
+            changeFrequency: "monthly" as const,
+            priority: 0.7,
+          },
+        ]
+      : []),
   ];
 
   const [products, categories] = await Promise.all([
@@ -50,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryRoutes: MetadataRoute.Sitemap = categories
     .filter((category) => Boolean(category?.slug))
     .map((category) => ({
-      url: `${SITE_URL}/shop?category=${encodeURIComponent(category.slug)}`,
+      url: fullUrl(`/shop?category=${encodeURIComponent(category.slug)}`),
       lastModified: category.updatedAt ? new Date(category.updatedAt) : now,
       changeFrequency: "weekly" as const,
       priority: 0.8,
@@ -59,7 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const productRoutes: MetadataRoute.Sitemap = products
     .filter((product) => Boolean(product?.slug))
     .map((product) => ({
-      url: `${SITE_URL}/shop-details/${encodeURIComponent(product.slug)}`,
+      url: fullUrl(`/shop-details/${encodeURIComponent(product.slug)}`),
       lastModified: (product as any).updatedAt
         ? new Date((product as any).updatedAt)
         : now,

@@ -4,6 +4,7 @@ import { AppDispatch, useAppSelector } from "@/redux/store";
 import { getProductCountFromCart, getStoredToken, redirectToSignIn } from "@/utils/helper";
 import { useDispatch } from "react-redux";
 import { DeleteFilled, MinusOutlined, PlusOutlined } from '@ant-design/icons';
+import { withTenantPath } from "@/lib/tenantUrl";
 import { useRouter } from "next/navigation";
 import { Button } from "antd";
 import { notifyError, notifySuccess } from "@/utils/notify";
@@ -29,7 +30,7 @@ const AddToCart = ({ id, align='center', stack = true, purchase = true, stock=0,
     const handleAddToCart = (redirect = false) => {
         dispatch(addItemToCart({id,quantity: quantity || 1}));
         if(redirect){
-            router.push('/checkout');
+            router.push(withTenantPath('/checkout'));
         }
     };
     const handleRemoveFromCart = () => {

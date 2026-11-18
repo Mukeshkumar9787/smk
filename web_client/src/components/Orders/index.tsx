@@ -5,6 +5,7 @@ import SingleOrder from "./SingleOrder";
 import Link from "next/link";
 import { getOrdersForUser } from "@/http/apiCalls";
 import { Pagination } from "antd";
+import { useTenant } from "@/app/context/TenantContext";
 
 const STATUS_FILTERS = [
   { key: "", label: "All Orders" },
@@ -14,6 +15,7 @@ const STATUS_FILTERS = [
 ];
 
 const Orders = () => {
+  const { storeHref } = useTenant();
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [pagination, setPagination] = useState({ pageNumber: 1, pageSize: 10 });
@@ -211,7 +213,7 @@ const Orders = () => {
                     : "You haven't placed any orders in this category yet."}
                 </p>
                 <Link
-                  href="/shop"
+                  href={storeHref("/shop")}
                   className="mt-6 rounded-sm bg-[#2874f0] px-6 py-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#1a5bc7]"
                 >
                   Start Shopping

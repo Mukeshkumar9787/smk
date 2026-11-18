@@ -12,6 +12,7 @@ import { STATUS_TYPES } from "@/utils/constants";
 import { Empty } from 'antd';
 import { FilterOutlined } from "@ant-design/icons";
 import ProductItem from "../Common/ProductItem";
+import { useTenant } from "@/app/context/TenantContext";
 
 
 const ShopWithSidebar = ({
@@ -28,6 +29,7 @@ const ShopWithSidebar = ({
   activeCategoryTitle?: string;
 } = {}) => {
   const [productSidebar, setProductSidebar] = useState(false);
+  const { storeHref } = useTenant();
   const [productItems, setProductItems] = React.useState(initialProducts);
   const [totalCount, setTotalCount] = React.useState(initialTotalCount);
   const [pagination, setPagination] = React.useState({ pageNumber: 1, pageSize: 6});
@@ -113,13 +115,13 @@ const ShopWithSidebar = ({
             <nav aria-label="Breadcrumb" className="text-sm text-dark-4">
               <ol className="flex flex-wrap items-center gap-2">
                 <li>
-                  <Link href="/" className="hover:text-blue transition">
+                  <Link href={storeHref("/")} className="hover:text-blue transition">
                     Home
                   </Link>
                 </li>
                 <li aria-hidden="true">/</li>
                 <li>
-                  <Link href="/shop" className="hover:text-blue transition">
+                  <Link href={storeHref("/shop")} className="hover:text-blue transition">
                     Shop
                   </Link>
                 </li>

@@ -7,8 +7,10 @@ import VerifyOTP from "../VerifyOTP";
 import ModalInfo from "@/components/Common/ModalInfo";
 import GoogleLoginButton from "../GoogleLoginButton";
 import { rateLimitManager } from "@/http/rateLimitManager";
+import { useTenant } from "@/app/context/TenantContext";
 
 const SigninOtp = () => {
+  const { storeHref } = useTenant();
   const [alert, setAlert] = useState(null);
   const [enterOTP, setEnterOTP] = useState(false);
   const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
@@ -91,14 +93,14 @@ const SigninOtp = () => {
                 </div>
 
                 <Link
-                  href="/signin"
+                  href={storeHref("/signin")}
                   className="block text-center text-dark-4 mt-4.5 ease-out duration-200 hover:text-dark"
                 >
                   Signin with password
                 </Link>
 
                 <Link
-                  href="/reset-password"
+                  href={storeHref("/reset-password")}
                   className="block text-center text-dark-4 mt-4.5 ease-out duration-200 hover:text-dark"
                 >
                   Forget your password?
@@ -107,7 +109,7 @@ const SigninOtp = () => {
                 <p className="text-center mt-6">
                   Already have an account?
                   <Link
-                    href="/signin"
+                    href={storeHref("/signin")}
                     className="text-dark ease-out duration-200 hover:text-blue pl-2"
                   >
                     Sign in Now

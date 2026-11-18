@@ -9,8 +9,10 @@ import PasswordInput from "@/components/Common/PasswordInput";
 import GoogleLoginButton from "../GoogleLoginButton";
 import TurnstileWidget, { TurnstileRef } from "@/components/Common/TurnstileWidget";
 import { rateLimitManager } from "@/http/rateLimitManager";
+import { useTenant } from "@/app/context/TenantContext";
 
 const Signup = () => {
+  const { storeHref } = useTenant();
   const [alert, setAlert] = useState(null);
   const [enterOTP, setEnterOTP] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
@@ -204,7 +206,7 @@ const Signup = () => {
                 <p className="text-center mt-6">
                   Already have an account?
                   <Link
-                    href="/signin"
+                    href={storeHref("/signin")}
                     className="text-dark ease-out duration-200 hover:text-blue pl-2"
                   >
                     Sign in Now

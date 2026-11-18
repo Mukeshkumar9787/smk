@@ -4,15 +4,17 @@ import React from "react";
 import { dateFormatter, getCurrencyDetails } from "@/utils/helper";
 import Link from "next/link";
 import { ORDER_URL } from "@/utils/appUrls";
+import { useTenant } from "@/app/context/TenantContext";
 
 interface SingleOrderProps {
   orderItem: any;
 }
 
 const SingleOrder: React.FC<SingleOrderProps> = ({ orderItem }) => {
+  const { storeHref } = useTenant();
   const currency = getCurrencyDetails().currencySymbol;
   const imagePath = orderItem.filePath || "/images/products/product-01.png";
-  const orderUrl = `${ORDER_URL}/${orderItem.orderNo}`;
+  const orderUrl = storeHref(`${ORDER_URL}/${orderItem.orderNo}`);
   const itemCount = orderItem.orderProducts?.length || 1;
   const courier = orderItem.additionalInfo?.courier;
   const trackingId = orderItem.additionalInfo?.trackingId;

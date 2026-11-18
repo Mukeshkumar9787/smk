@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import OrderDetails from "./OrderDetails";
 import Link from "next/link";
 import { ORDER_URL } from "@/utils/appUrls";
+import { useTenant } from "@/app/context/TenantContext";
 
 interface OrderModalProps {
   isOpen?: boolean;
@@ -24,6 +25,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
   toggleModal,
   order,
 }) => {
+  const { storeHref } = useTenant();
   const visible = isOpen ?? Boolean(showDetails);
   const activeOrderNo = orderNo || order?.orderNo;
 
@@ -93,7 +95,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
 
           <div className="flex items-center gap-2">
             <Link
-              href={`${ORDER_URL}/${activeOrderNo}`}
+              href={storeHref(`${ORDER_URL}/${activeOrderNo}`)}
               onClick={handleClose}
               title="Open specific order page"
               className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-sky-700 transition"

@@ -7,6 +7,7 @@ import {
   provisionTenantStore,
 } from "@/http/apiCalls";
 import { THEME_PRESETS } from "@/lib/theme";
+import { getTenantStorageKey } from "@/lib/tenantUrl";
 import { notifyError, notifySuccess } from "@/utils/notify";
 
 function slugify(text: string) {
@@ -114,9 +115,8 @@ export default function LaunchStore() {
 
       const { tenant, token } = res.data;
       if (token) {
-        localStorage.setItem("token", token);
+        localStorage.setItem(getTenantStorageKey("token", tenant.slug), token);
       }
-      document.cookie = `smk_tenant_slug=${encodeURIComponent(tenant.slug)}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`;
       notifySuccess(`Store "${tenant.name}" is live! Opening your branding studio...`);
       window.location.href = `/s/${encodeURIComponent(tenant.slug)}/config/branding`;
     } catch (err) {

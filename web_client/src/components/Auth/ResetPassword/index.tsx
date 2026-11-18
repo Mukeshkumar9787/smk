@@ -7,8 +7,10 @@ import VerifyOTP from "../VerifyOTP";
 import ModalInfo from "@/components/Common/ModalInfo";
 import PasswordInput from "@/components/Common/PasswordInput";
 import { rateLimitManager } from "@/http/rateLimitManager";
+import { useTenant } from "@/app/context/TenantContext";
 
 const ResetPassword = ({ email = '', nestedForm=false }) => {
+  const { storeHref } = useTenant();
   const [resetFormValue, setResetFormValue] = useState(false);
   const [alert, setAlert] = useState(null);
   const [enterOTP, setEnterOTP] = useState(false);
@@ -141,14 +143,14 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
                 {!nestedForm && 
                   <>
                     <Link
-                      href="/signin-otp"
+                      href={storeHref("/signin-otp")}
                       className="block text-center text-dark-4 mt-4.5 ease-out duration-200 hover:text-dark"
                     >
                       Signin&nbsp;with&nbsp;OTP
                     </Link>
 
                     <Link
-                      href="/signin"
+                      href={storeHref("/signin")}
                       className="block text-center text-dark-4 mt-4.5 ease-out duration-200 hover:text-dark"
                     >
                       Sign In with password
@@ -157,7 +159,7 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
                     <p className="text-center mt-6">
                       Don&apos;t have an account?
                       <Link
-                        href="/signup"
+                        href={storeHref("/signup")}
                         className="text-dark ease-out duration-200 hover:text-blue pl-2"
                         >
                         Sign Up Now!

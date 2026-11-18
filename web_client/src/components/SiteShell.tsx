@@ -16,7 +16,8 @@ import { PreviewSliderProvider } from "@/app/context/PreviewSliderContext";
 import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import LoaderOverlay from "@/components/Common/LoaderOverlay";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { withTenantPath } from "@/lib/tenantUrl";
 import { subscribeApiLoader } from "@/http/apiLoader";
 import ScrollToTop from "@/components/Common/ScrollToTop";
 import CartSync from "@/components/Common/CartSync";
@@ -28,7 +29,8 @@ import ButtonLoaderManager from "@/components/Common/ButtonLoaderManager";
 import { DEFAULT_TENANT, type PublicTenant } from "@/lib/theme";
 
 function SiteShellInner({ children }: { children: React.ReactNode }) {
-  const { branding } = useTenant();
+  const { branding, basePath } = useTenant();
+  const router = useRouter();
   // Keep initial SSR/hydration paint unblocked for fast LCP and crawler visibility
   const [showLoader, setShowLoader] = useState<boolean>(false);
   const [pageLoading, setPageLoading] = useState(false);
@@ -66,16 +68,46 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
 
       try {
         const targetUrl = new URL(anchor.href, window.location.href);
-        if (
-          targetUrl.origin === window.location.origin &&
-          targetUrl.pathname !== window.location.pathname
-        ) {
-          isPageLoadingRef.current = true;
-          setPageLoading(true);
-          setShowLoader(true);
-          if (hideTimerRef.current) {
-            clearTimeout(hideTimerRef.current);
-            hideTimerRef.current = null;
+        if (targetUrl.origin === window.location.origin) {
+          // Safeguard: when inside a path-scoped tenant store (/s/<slug>),
+          // ensure no relative link can accidentally drop the tenant prefix.
+          if (
+            basePath &&
+            !anchor.hasAttribute("data-no-tenant-prefix") &&
+            targetUrl.pathname !== basePath &&
+            !targetUrl.pathname.startsWith(`${basePath}/`) &&
+            !targetUrl.pathname.startsWith("/s/") &&
+            !e.metaKey &&
+            !e.ctrlKey &&
+            !e.shiftKey &&
+            !e.altKey &&
+            e.button === 0
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            const scoped = withTenantPath(
+              `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`,
+              basePath
+            );
+            isPageLoadingRef.current = true;
+            setPageLoading(true);
+            setShowLoader(true);
+            if (hideTimerRef.current) {
+              clearTimeout(hideTimerRef.current);
+              hideTimerRef.current = null;
+            }
+            router.push(scoped);
+            return;
+          }
+
+          if (targetUrl.pathname !== window.location.pathname) {
+            isPageLoadingRef.current = true;
+            setPageLoading(true);
+            setShowLoader(true);
+            if (hideTimerRef.current) {
+              clearTimeout(hideTimerRef.current);
+              hideTimerRef.current = null;
+            }
           }
         }
       } catch (err) {}
@@ -85,7 +117,7 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
     return () => {
       document.removeEventListener("click", handleLinkClick, true);
     };
-  }, []);
+  }, [basePath, router]);
 
   useEffect(() => {
     if (!hasNavigatedRef.current) {
@@ -198,12 +230,14 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
 export default function SiteShell({
   children,
   initialTenant = DEFAULT_TENANT,
+  initialBasePath = "",
 }: {
   children: React.ReactNode;
   initialTenant?: PublicTenant;
+  initialBasePath?: string;
 }) {
   return (
-    <TenantProvider initialTenant={initialTenant}>
+    <TenantProvider initialTenant={initialTenant} initialBasePath={initialBasePath}>
       <SiteShellInner>{children}</SiteShellInner>
     </TenantProvider>
   );

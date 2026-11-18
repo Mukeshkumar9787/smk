@@ -46,6 +46,7 @@ interface PublicMetadataOptions {
   title: string;
   description: string;
   path?: string;
+  siteName?: string;
   images?: Array<{ url: string; alt?: string; width?: number; height?: number }>;
   keywords?: string[];
   noIndex?: boolean;
@@ -55,6 +56,7 @@ export function buildPublicMetadata({
   title,
   description,
   path = "/",
+  siteName = SITE_NAME,
   images,
   keywords,
   noIndex = false,
@@ -71,13 +73,13 @@ export function buildPublicMetadata({
       : [
           {
             url: absoluteUrl(DEFAULT_OG_IMAGE),
-            alt: SITE_NAME,
+            alt: siteName,
           },
         ];
 
-  const socialTitle = title.includes(SITE_NAME)
+  const socialTitle = title.includes(siteName)
     ? title
-    : `${title} | ${SITE_NAME}`;
+    : `${title} | ${siteName}`;
 
   return {
     title,
@@ -103,7 +105,7 @@ export function buildPublicMetadata({
       type: "website",
       locale: "en_IN",
       url: canonical,
-      siteName: SITE_NAME,
+      siteName,
       title: socialTitle,
       description,
       images: ogImages,
@@ -135,19 +137,24 @@ export function buildBreadcrumbJsonLd(items: BreadcrumbEntry[]) {
   };
 }
 
-export function buildOrganizationJsonLd(compInfo?: {
-  name?: string;
-  email?: string;
-  mobile?: string;
-  address?: string;
-} | null) {
+export function buildOrganizationJsonLd(
+  compInfo?: {
+    name?: string;
+    email?: string;
+    mobile?: string;
+    address?: string;
+  } | null,
+  options?: { siteName?: string; logoUrl?: string | null; basePath?: string; description?: string }
+) {
+  const brandName = compInfo?.name || options?.siteName || SITE_NAME;
+  const storeUrl = absoluteUrl(options?.basePath || "/");
   const org: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: compInfo?.name || SITE_NAME,
-    url: SITE_URL,
-    logo: absoluteUrl(DEFAULT_OG_IMAGE),
-    description: SITE_DESCRIPTION,
+    name: brandName,
+    url: storeUrl,
+    logo: absoluteUrl(options?.logoUrl || DEFAULT_OG_IMAGE),
+    description: options?.description || SITE_DESCRIPTION,
   };
 
   if (compInfo?.email || compInfo?.mobile) {
@@ -172,16 +179,22 @@ export function buildOrganizationJsonLd(compInfo?: {
   return org;
 }
 
-export function buildWebsiteJsonLd() {
+export function buildWebsiteJsonLd(options?: {
+  siteName?: string;
+  basePath?: string;
+  description?: string;
+}) {
+  const basePath = options?.basePath || "";
+  const storeUrl = absoluteUrl(basePath || "/");
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: SITE_NAME,
-    url: SITE_URL,
-    description: SITE_DESCRIPTION,
+    name: options?.siteName || SITE_NAME,
+    url: storeUrl,
+    description: options?.description || SITE_DESCRIPTION,
     potentialAction: {
       "@type": "SearchAction",
-      target: `${SITE_URL}/shop?search={search_term_string}`,
+      target: `${absoluteUrl(`${basePath}/shop`)}?search={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
   };
@@ -232,9 +245,12 @@ export function extractProductImageUrls(product: SeoProductData): string[] {
 
 export function buildProductJsonLd(
   product: SeoProductData,
-  reviews: SeoReviewData[] = []
+  reviews: SeoReviewData[] = [],
+  options?: { siteName?: string; basePath?: string }
 ) {
-  const productUrl = absoluteUrl(`/shop-details/${product.slug}`);
+  const brandName = options?.siteName || SITE_NAME;
+  const basePath = options?.basePath || "";
+  const productUrl = absoluteUrl(`${basePath}/shop-details/${product.slug}`);
   const images = extractProductImageUrls(product);
   const inStock = Number(product.stock ?? 0) > 0;
   const reviewCount = Number(product.reviewCount ?? reviews.length ?? 0);
@@ -248,13 +264,13 @@ export function buildProductJsonLd(
     image: images,
     description: truncateDescription(
       product.description ||
-        `Buy ${product.title} online at ${SITE_NAME} for ₹${product.price}.`,
+        `Buy ${product.title} online at ${brandName} for ₹${product.price}.`,
       300
     ),
-    sku: product.variant || `SMK-${product.id}`,
+    sku: product.variant || `${brandName.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4) || "SKU"}-${product.id}`,
     brand: {
       "@type": "Brand",
-      name: SITE_NAME,
+      name: brandName,
     },
     ...(product.categoryName ? { category: product.categoryName } : {}),
     ...(product.sizeTitle ? { size: product.sizeTitle } : {}),
@@ -270,7 +286,7 @@ export function buildProductJsonLd(
       itemCondition: "https://schema.org/NewCondition",
       seller: {
         "@type": "Organization",
-        name: SITE_NAME,
+        name: brandName,
       },
     },
   };
@@ -310,7 +326,8 @@ export function buildCollectionPageJsonLd(
   products: SeoProductData[],
   title: string,
   description: string,
-  path: string
+  path: string,
+  basePath = ""
 ) {
   return {
     "@context": "https://schema.org",
@@ -324,7 +341,7 @@ export function buildCollectionPageJsonLd(
       itemListElement: products.slice(0, 24).map((product, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: absoluteUrl(`/shop-details/${product.slug}`),
+        url: absoluteUrl(`${basePath}/shop-details/${product.slug}`),
         name: product.title,
       })),
     },

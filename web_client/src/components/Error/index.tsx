@@ -1,8 +1,11 @@
+"use client";
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useTenant } from "@/app/context/TenantContext";
 
 const Error = () => {
+  const { storeHref } = useTenant();
   return (
     <>
       <section className="overflow-hidden py-20 bg-gray-2">
@@ -27,7 +30,7 @@ const Error = () => {
               </p>
 
               <Link
-                href="/"
+                href={storeHref("/")}
                 className="inline-flex items-center gap-2 font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark"
               >
                 <svg

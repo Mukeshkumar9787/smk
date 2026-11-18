@@ -5,8 +5,10 @@ import Link from "next/link";
 import { SHOP_DETAILS } from "@/utils/appUrls";
 import AvailableStock from "../Common/AvailableStock";
 import React from "react";
+import { useTenant } from "@/app/context/TenantContext";
 
 const OrderList = ({ productItems, totalPrice, shippingAmount }) => {
+    const { storeHref } = useTenant();
     
 
     if(productItems.length === 0) {
@@ -42,7 +44,7 @@ const OrderList = ({ productItems, totalPrice, shippingAmount }) => {
           <div key={product.id} className="flex items-center justify-between py-5 border-b border-gray-3">
               <div className="flex w-full">
                 <div>
-                <Link href={`${SHOP_DETAILS}/${product.slug}`} > 
+                <Link href={storeHref(`${SHOP_DETAILS}/${product.slug}`)} > 
                     <img src={product.img} className="w-20" alt={product.title} /> 
                     <div>{product.title}({currency}{product.price})</div>
                     <AvailableStock stock={product.stock} small />

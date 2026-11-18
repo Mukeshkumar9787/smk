@@ -1,12 +1,19 @@
 "use client";
 
 import Script from "next/script";
+import { useTenant } from "@/app/context/TenantContext";
 
 /**
- * Embeds the SMK Customer Support RAG Assistant in the store web client.
- * Driven by NEXT_PUBLIC_CHATBOT_EMBED_URL in .env.
+ * Embeds the SMK Customer Support RAG Assistant on the main SMK store only
+ * so isolated tenant storefronts remain fully white-labeled.
  */
 export default function ChatbotAssistant() {
+  const { tenant } = useTenant();
+
+  if (!tenant?.isDefault) {
+    return null;
+  }
+
   const embedUrl =
     process.env.NEXT_PUBLIC_CHATBOT_EMBED_URL ||
     (process.env.NEXT_PUBLIC_CHATBOT_URL
@@ -29,4 +36,3 @@ export default function ChatbotAssistant() {
     />
   );
 }
-

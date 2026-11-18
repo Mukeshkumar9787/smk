@@ -8,8 +8,10 @@ import Link from "next/link";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { removeAllItemsFromCart } from "@/redux/features/cart-slice";
+import { useTenant } from "@/app/context/TenantContext";
 
 const Cart = () => {
+  const { storeHref } = useTenant();
   const cartItems = useAppSelector((state) => state.cartReducer.items);
   const dispatch = useDispatch<AppDispatch>();
 
@@ -103,7 +105,7 @@ const Cart = () => {
             <p className="pb-6">Your cart is empty!</p>
 
             <Link
-              href="/shop-with-sidebar"
+              href={storeHref("/shop")}
               className="w-96 mx-auto flex justify-center font-medium text-white bg-dark py-[13px] px-6 rounded-md ease-out duration-200 hover:bg-opacity-95"
             >
               Continue Shopping

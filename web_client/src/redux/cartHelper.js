@@ -1,8 +1,10 @@
-// cartStorage.ts
+import { getTenantStorageKey } from "@/lib/tenantUrl";
+
+// cartStorage.ts — tenant-isolated cart persistence
 export const loadCartFromStorage = () => {
   try {
-    const serializedState = localStorage.getItem("cart");
-    if (!serializedState) return {items: []};
+    const serializedState = localStorage.getItem(getTenantStorageKey("cart"));
+    if (!serializedState) return { items: [] };
     return JSON.parse(serializedState);
   } catch {
     return undefined;
@@ -12,7 +14,7 @@ export const loadCartFromStorage = () => {
 export const saveCartToStorage = (state) => {
   try {
     const serializedState = JSON.stringify(state);
-    localStorage.setItem("cart", serializedState);
+    localStorage.setItem(getTenantStorageKey("cart"), serializedState);
   } catch {
     // ignore write errors
   }

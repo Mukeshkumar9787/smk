@@ -5,7 +5,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Create Account",
-  "Register a new SMK account for faster checkout and order tracking."
+  "Register a new account for faster checkout and order tracking."
 );
 
 const SignupPage = () => {

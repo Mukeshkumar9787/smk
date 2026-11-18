@@ -2,6 +2,7 @@
 
 import { getCategories } from "@/http/apiCalls";
 import { STATUS_TYPES } from "@/utils/constants";
+import { useTenant } from "@/app/context/TenantContext";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -14,6 +15,7 @@ const CategoryDropdown = ({
   initialCategories?: any[];
   onSelect?: () => void;
 }) => {
+  const { storeHref } = useTenant();
   const [categories, setCategories] = useState(initialCategories);
   const [toggleDropdown, setToggleDropdown] = useState(true);
 
@@ -80,7 +82,7 @@ const CategoryDropdown = ({
         {categories.map((category) => (
           <Link
             key={category.id || category.slug}
-            href={`/shop?category=${encodeURIComponent(category.slug)}`}
+            href={storeHref(`/shop?category=${encodeURIComponent(category.slug)}`)}
             onClick={() => {
               if (onSelect) onSelect();
               else if (setCategoryFilter) setCategoryFilter(category.slug);

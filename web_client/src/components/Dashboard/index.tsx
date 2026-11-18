@@ -7,6 +7,8 @@ import { getAdminDashboard } from "@/http/apiCalls";
 import { getCurrencyDetails, getLoggedInUserData, getShippingDisplay, getStoredToken, redirectToSignIn } from "@/utils/helper";
 import { ORDER_STATUS, ORDER_STATUS_COLOR, ROLE_TYPES, STATUS_TYPES } from "@/utils/constants";
 import { ORDER_URL, PRODUCT_URL, USER_URL } from "@/utils/appUrls";
+import { useTenant } from "@/app/context/TenantContext";
+import { withTenantPath } from "@/lib/tenantUrl";
 
 const SALES_STATUSES = new Set([
   ORDER_STATUS.PLACED,
@@ -61,6 +63,7 @@ const SUMMARY_ACCENTS = {
 };
 
 const Dashboard = () => {
+  const { storeHref } = useTenant();
   const [isLoading, setIsLoading] = React.useState(true);
   const [dashboardData, setDashboardData] = React.useState(null);
 
@@ -80,7 +83,7 @@ const Dashboard = () => {
         }
 
         if (user.role !== ROLE_TYPES.ADMIN) {
-          window.location.href = "/";
+          window.location.href = withTenantPath("/");
           return;
         }
 
@@ -314,7 +317,7 @@ const Dashboard = () => {
                         >
                           <div className="min-w-0">
                             <Link
-                              href={`${PRODUCT_URL}/${product.slug}`}
+                              href={storeHref(`${PRODUCT_URL}/${product.slug}`)}
                               className="block truncate font-medium text-dark transition hover:text-blue"
                             >
                               {product.title}
@@ -364,7 +367,7 @@ const Dashboard = () => {
                           </div>
                           <div className="min-w-0 flex-1">
                             <Link
-                              href={`${PRODUCT_URL}/${product.slug}`}
+                              href={storeHref(`${PRODUCT_URL}/${product.slug}`)}
                               className="block truncate font-medium text-dark transition hover:text-blue"
                             >
                               {product.title}
@@ -425,7 +428,7 @@ const Dashboard = () => {
                     <p className="text-sm text-dark-4">Latest customer orders directly on the admin landing screen.</p>
                   </div>
                   <Link
-                    href={ORDER_URL}
+                    href={storeHref(ORDER_URL)}
                     className="inline-flex items-center rounded-full border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-blue hover:text-blue"
                   >
                     View all orders
@@ -450,7 +453,7 @@ const Dashboard = () => {
                           <tr key={order.id} className="rounded-2xl bg-slate-50">
                             <td className="rounded-l-2xl px-4 py-4 align-top">
                               <Link
-                                href={`${ORDER_URL}/${order.orderNo}`}
+                                href={storeHref(`${ORDER_URL}/${order.orderNo}`)}
                                 className="font-semibold text-dark transition hover:text-blue"
                               >
                                 #{order.orderNo}
@@ -502,7 +505,7 @@ const Dashboard = () => {
                     <p className="text-sm text-dark-4">Newest accounts with their paid-order activity and spend.</p>
                   </div>
                   <Link
-                    href={USER_URL}
+                    href={storeHref(USER_URL)}
                     className="inline-flex items-center rounded-full border border-gray-3 px-4 py-2 text-sm font-medium text-dark transition hover:border-blue hover:text-blue"
                   >
                     View all users

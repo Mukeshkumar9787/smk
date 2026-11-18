@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { getConfig } from "@/http/apiCalls";
 import { CONFIG_KEYS } from "@/utils/constants";
@@ -8,7 +9,7 @@ import ContactInfo from "../Common/ContactInfo";
 
 const Footer = () => {
   const year = new Date().getFullYear();
-  const { branding } = useTenant();
+  const { branding, storeHref } = useTenant();
 
   const [compInfo, setCompInfo] = React.useState<any>({});
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -179,26 +180,26 @@ const Footer = () => {
               {isLoggedIn && (
                 <>
                   <li>
-                    <a className="ease-out duration-200 hover:text-blue" href="/orders">
+                    <Link className="ease-out duration-200 hover:text-blue" href={storeHref("/orders")}>
                       Orders
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a className="ease-out duration-200 hover:text-blue" href="/my-account">
+                    <Link className="ease-out duration-200 hover:text-blue" href={storeHref("/my-account")}>
                       My Account
-                    </a>
+                    </Link>
                   </li>
                 </>
               )}
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href={isLoggedIn ? "/my-account" : "/signin"}>
+                <Link className="ease-out duration-200 hover:text-blue" href={storeHref(isLoggedIn ? "/my-account" : "/signin")}>
                   {isLoggedIn ? "Account Details" : "Login / Register"}
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="/shop">
+                <Link className="ease-out duration-200 hover:text-blue" href={storeHref("/shop")}>
                   Shop
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -231,9 +232,9 @@ const Footer = () => {
               </li>
               }
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="/contact">
+                <Link className="ease-out duration-200 hover:text-blue" href={storeHref("/contact")}>
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -5,11 +5,13 @@ import { AppDispatch } from "@/redux/store";
 import { getCurrencyDetails } from "@/utils/helper";
 import { removeItemFromWishlist } from "@/redux/features/wishlist-slice";
 import { useWishlistModalContext } from "@/app/context/WishlistSidebarModalContext";
+import { useTenant } from "@/app/context/TenantContext";
 import { Popconfirm } from "antd";
 
 const SingleItem = ({ item }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { closeWishlistModal } = useWishlistModalContext();
+  const { storeHref } = useTenant();
   const handleRemoveFromWishlist = () => {
     dispatch(removeItemFromWishlist(item.id));
   };
@@ -19,7 +21,7 @@ const SingleItem = ({ item }) => {
       <div className="flex items-start justify-between gap-4">
         <div className="flex w-full items-start gap-4">
           <Link
-            href={`/shop-details/${item.slug}`}
+            href={storeHref(`/shop-details/${item.slug}`)}
             onClick={() => closeWishlistModal()}
             className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-[20px] bg-slate-100"
           >
@@ -28,7 +30,7 @@ const SingleItem = ({ item }) => {
 
           <div className="min-w-0 flex-1">
             <Link
-              href={`/shop-details/${item.slug}`}
+              href={storeHref(`/shop-details/${item.slug}`)}
               onClick={() => closeWishlistModal()}
               className="block truncate font-semibold text-dark transition hover:text-blue"
             >
@@ -38,7 +40,7 @@ const SingleItem = ({ item }) => {
               Price: {getCurrencyDetails().currencySymbol} {item.price}
             </p>
             <Link
-              href={`/shop-details/${item.slug}`}
+              href={storeHref(`/shop-details/${item.slug}`)}
               onClick={() => closeWishlistModal()}
               className="mt-4 inline-flex rounded-2xl border border-blue bg-blue px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-dark"
             >

@@ -7,22 +7,26 @@ import { adminMenuData } from "@/components/Header/menuData";
 import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { ROLE_TYPES } from "@/utils/constants";
 import { PLATFORM_ADMIN_URL } from "@/utils/appUrls";
+import { useTenant } from "@/app/context/TenantContext";
+import { stripTenantPrefix } from "@/lib/tenantUrl";
 
 const adminLinks = adminMenuData.flatMap((item) => item.submenu || []);
 
 const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = stripTenantPrefix(rawPathname);
+  const { tenant, storeHref } = useTenant();
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = React.useState(false);
   const allLinks = React.useMemo(
     () =>
-      isPlatformAdmin
+      isPlatformAdmin && tenant?.isDefault
         ? [
             { title: "Super Admin", newTab: false, path: PLATFORM_ADMIN_URL },
             ...adminLinks,
           ]
         : adminLinks,
-    [isPlatformAdmin]
+    [isPlatformAdmin, tenant?.isDefault]
   );
   const isAdminPage =
     pathname === PLATFORM_ADMIN_URL ||
@@ -63,7 +67,7 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
               return (
                 <Link
                   key={item.path}
-                  href={item.path || "/"}
+                  href={storeHref(item.path || "/")}
                   className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${
                     isActive
                       ? "bg-blue text-white shadow-lg"
