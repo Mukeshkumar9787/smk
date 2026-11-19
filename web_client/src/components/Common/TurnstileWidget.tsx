@@ -174,8 +174,7 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
             sitekey: siteKey,
             theme,
             "refresh-expired": "auto",
-            retry: "auto",
-            "retry-interval": 1000,
+            retry: "never",
             callback: (token: string) => {
               latestTokenRef.current = token;
               onVerify(token);
