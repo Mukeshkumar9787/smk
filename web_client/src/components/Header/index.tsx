@@ -79,25 +79,7 @@ const Header = () => {
         setUser(userData);
         const resolvedAdminMenu =
           userData.role === ROLE_TYPES.ADMIN
-            ? adminMenuData.map((group) => ({
-                ...group,
-                submenu:
-                  userData.isPlatformAdmin && tenant?.isDefault
-                    ? [
-                        {
-                          title: "Super Admin",
-                          newTab: false,
-                          path: PLATFORM_ADMIN_URL,
-                        },
-                        {
-                          title: "Create Store",
-                          newTab: false,
-                          path: LAUNCH_STORE_URL,
-                        },
-                        ...(group.submenu || []),
-                      ]
-                    : group.submenu,
-              }))
+            ? adminMenuData
             : [];
         const authedMenu = [
           ...menuData.filter((item) => item.path !== "/contact"),

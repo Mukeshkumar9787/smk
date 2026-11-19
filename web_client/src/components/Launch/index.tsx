@@ -43,17 +43,13 @@ export default function LaunchStore() {
   useEffect(() => {
     const checkAccessAndLoadPlans = async () => {
       if (!getStoredToken()) {
-        redirectToSignIn("/launch");
+        window.location.href = "/platform-admin/login";
         return;
       }
       try {
         const user = await getLoggedInUserData();
-        if (!user) {
-          redirectToSignIn("/launch");
-          return;
-        }
-        if (!user.isPlatformAdmin) {
-          setAuthState("forbidden");
+        if (!user || !user.isPlatformAdmin) {
+          window.location.href = "/platform-admin/login";
           return;
         }
         setAuthState("authorized");
@@ -167,10 +163,10 @@ export default function LaunchStore() {
               Only the Platform Super Admin can create and provision new stores.
             </p>
             <Link
-              href="/"
+              href="/platform-admin/login"
               className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-dark"
             >
-              Return to Store
+              Sign In as Platform Admin
             </Link>
           </div>
         </div>
@@ -181,6 +177,16 @@ export default function LaunchStore() {
   return (
     <section className="page-section">
       <div className="mx-auto max-w-[1170px] px-4 sm:px-8 xl:px-0">
+        {/* Back to Platform Admin */}
+        <div className="mb-4">
+          <Link
+            href="/platform-admin"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-blue hover:text-blue-dark transition"
+          >
+            &larr; Back to Platform Governance
+          </Link>
+        </div>
+
         {/* Hero */}
         <div className="mb-10 rounded-[34px] border border-sky-100 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-10">
           <span className="inline-flex rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">

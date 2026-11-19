@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   createPlatformStore,
   getPlatformOverview,
@@ -170,13 +171,12 @@ export default function PlatformAdmin() {
             >
               Sign Out
             </button>
-            <button
-              type="button"
-              onClick={() => setShowCreate((prev) => !prev)}
+            <Link
+              href="/launch"
               className="inline-flex min-h-[44px] items-center rounded-2xl bg-blue px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-dark cursor-pointer"
             >
-              {showCreate ? "Close Form" : "+ Provision New Store"}
-            </button>
+              + Provision New Store &rarr;
+            </Link>
           </div>
         </div>
 

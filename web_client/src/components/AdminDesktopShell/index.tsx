@@ -18,27 +18,18 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
   const { tenant, storeHref } = useTenant();
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = React.useState(false);
-  const allLinks = React.useMemo(
-    () =>
-      isPlatformAdmin && tenant?.isDefault
-        ? [
-            { title: "Super Admin", newTab: false, path: PLATFORM_ADMIN_URL },
-            { title: "Create Store", newTab: false, path: LAUNCH_STORE_URL },
-            ...adminLinks,
-          ]
-        : adminLinks,
-    [isPlatformAdmin, tenant?.isDefault]
-  );
-  const isAdminPage =
-    (pathname === PLATFORM_ADMIN_URL ||
-    (pathname.startsWith(`${PLATFORM_ADMIN_URL}/`) && pathname !== `${PLATFORM_ADMIN_URL}/login`) ||
-    pathname === LAUNCH_STORE_URL ||
-    pathname.startsWith(`${LAUNCH_STORE_URL}/`) ||
-    adminLinks.some((item) =>
-      item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false
-    ));
+  const allLinks = adminLinks;
 
-  if (pathname === `${PLATFORM_ADMIN_URL}/login`) {
+  const isAdminPage = adminLinks.some((item) =>
+    item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false
+  );
+
+  if (
+    pathname === PLATFORM_ADMIN_URL ||
+    pathname.startsWith(`${PLATFORM_ADMIN_URL}/`) ||
+    pathname === LAUNCH_STORE_URL ||
+    pathname.startsWith(`${LAUNCH_STORE_URL}/`)
+  ) {
     return <>{children}</>;
   }
 

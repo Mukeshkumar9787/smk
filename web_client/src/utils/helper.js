@@ -89,12 +89,49 @@ export const getProductCountFromCart = (id, cartItems) => cartItems.find(i => i.
 export const getLoggedInUserData = async () => {
   try {
     if (!getStoredToken()) return null;
+
+    if (typeof window !== "undefined") {
+      const isPlatformRoute =
+        window.location?.pathname?.startsWith("/platform-admin") ||
+        window.location?.pathname?.startsWith("/launch");
+      if (isPlatformRoute) {
+        const storedAdmin = localStorage.getItem("platform_admin");
+        if (storedAdmin) {
+          try {
+            const parsed = JSON.parse(storedAdmin);
+            if (parsed && parsed.isPlatformAdmin) {
+              return {
+                ...parsed,
+                role: ROLE_TYPES.ADMIN,
+                isPlatformAdmin: true,
+              };
+            }
+          } catch {}
+        }
+      }
+    }
+
     const user = await getUserInfo();
     return user.data || null;
   } catch (error) {
+    if (typeof window !== "undefined") {
+      const storedAdmin = localStorage.getItem("platform_admin");
+      if (storedAdmin) {
+        try {
+          const parsed = JSON.parse(storedAdmin);
+          if (parsed && parsed.isPlatformAdmin) {
+            return {
+              ...parsed,
+              role: ROLE_TYPES.ADMIN,
+              isPlatformAdmin: true,
+            };
+          }
+        } catch {}
+      }
+    }
     return null;
   } 
-}
+};
 
 export const afterSucessfullLogin = async (token) => {
   localStorage.setItem(getTenantStorageKey("token"), token);
