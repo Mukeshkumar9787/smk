@@ -92,7 +92,7 @@ export default function PlatformAdminLogin() {
               type="email"
               required
               autoFocus
-              placeholder="e.g. mukeshkumar87086@gmail.com"
+              placeholder="admin@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder-slate-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
