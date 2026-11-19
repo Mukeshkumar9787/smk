@@ -324,6 +324,7 @@ const provisionTenant = async ({
     branding: {
       storeName: cleanStoreName,
       primaryColor: validPrimary,
+      accentColor: validAccent,
     },
   }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
 
@@ -421,19 +422,19 @@ const updateCurrentBranding = async (payload = {}) => {
 
   clearTenantCache();
 
-  if (payload.aiChatbotActive !== undefined) {
-    emitTenantLifecycleEvent({
-      event: "TENANT_CHATBOT_UPDATED",
-      tenantId: current.id,
-      slug: current.slug,
-      name: current.name,
-      status: current.status,
-      aiChatbotEnabled: Boolean(aiChatbotActive),
-      branding: {
-        storeName: data.storeName || current.name,
-      },
-    }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
-  }
+  emitTenantLifecycleEvent({
+    event: payload.aiChatbotActive !== undefined ? "TENANT_CHATBOT_UPDATED" : "TENANT_BRANDING_UPDATED",
+    tenantId: current.id,
+    slug: current.slug,
+    name: current.name,
+    status: current.status,
+    aiChatbotEnabled: payload.aiChatbotActive !== undefined ? Boolean(aiChatbotActive) : current.branding?.aiChatbotActive,
+    branding: {
+      storeName: data.storeName || current.name,
+      primaryColor: data.primaryColor || current.branding?.primaryColor,
+      accentColor: data.accentColor || current.branding?.accentColor,
+    },
+  }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
 
   return getCurrentBranding();
 };
@@ -642,6 +643,8 @@ const updateTenantChatbotAccess = async ({ tenantId, aiChatbotEnabled }) => {
       aiChatbotEnabled: isEnabled,
       branding: {
         storeName: updatedBranding.storeName || target.name,
+        primaryColor: target.branding?.primaryColor || updatedBranding.primaryColor,
+        accentColor: target.branding?.accentColor || updatedBranding.accentColor,
       },
     }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
 

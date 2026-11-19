@@ -37,6 +37,8 @@ export default function ChatbotAssistant() {
   if (tenant?.id) queryParams.set("tenantId", tenant.id);
   const storeDisplayName = branding?.storeName || tenant?.name || "";
   if (storeDisplayName) queryParams.set("storeName", storeDisplayName);
+  if (branding?.primaryColor) queryParams.set("primaryColor", branding.primaryColor);
+  if (branding?.accentColor) queryParams.set("accentColor", branding.accentColor);
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
   const finalScriptSrc = `${scriptSrc}${queryString}`;
 
@@ -48,6 +50,8 @@ export default function ChatbotAssistant() {
       data-tenant-id={tenant?.id || ""}
       data-tenant-slug={tenant?.slug || ""}
       data-store-name={storeDisplayName}
+      data-primary-color={branding?.primaryColor || ""}
+      data-accent-color={branding?.accentColor || ""}
     />
   );
 }
