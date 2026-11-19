@@ -1,13 +1,82 @@
 import dotenv from "dotenv";
+import pg from "pg";
 import { Prisma, PrismaClient } from "./generated/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { getTenantContext } from "../utils/tenantContext.js";
+import { getTenantContext, DEFAULT_TENANT_ID } from "../utils/tenantContext.js";
 
 dotenv.config();
 
-const adapter = new PrismaPg({
+const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl:
+    process.env.DATABASE_URL?.includes("sslmode=require") ||
+    process.env.DATABASE_URL?.includes("db.prisma.io")
+      ? { rejectUnauthorized: false }
+      : false,
 });
+
+// Intercept PostgreSQL pool client checkouts to enforce PostgreSQL Row-Level Security (RLS)
+const origConnect = pool.connect.bind(pool);
+pool.connect = function (callback) {
+  if (typeof callback === "function") {
+    return origConnect(async (err, client, release) => {
+      if (err) return callback(err, client, release);
+      try {
+        const ctx = getTenantContext();
+        const tid = ctx?.tenantId || DEFAULT_TENANT_ID;
+        const bypass = ctx?.bypassRls ? "true" : "false";
+        const userId = ctx?.userId ? String(ctx.userId) : "";
+        const isStoreAdmin = ctx?.isStoreAdmin ? "true" : "false";
+
+        if (ctx?.bypassRls) {
+          try {
+            await client.query("RESET ROLE;");
+          } catch (e) {}
+        } else {
+          try {
+            await client.query("SET ROLE prisma_application;");
+          } catch (e) {}
+        }
+
+        await client.query(
+          "SELECT set_config('app.current_tenant_id', $1, false), set_config('app.bypass_rls', $2, false), set_config('app.current_user_id', $3, false), set_config('app.is_store_admin', $4, false);",
+          [tid, bypass, userId, isStoreAdmin]
+        );
+        return callback(null, client, release);
+      } catch (setupErr) {
+        release(setupErr);
+        return callback(setupErr);
+      }
+    });
+  }
+
+  return (async () => {
+    const client = await origConnect();
+    const ctx = getTenantContext();
+    const tid = ctx?.tenantId || DEFAULT_TENANT_ID;
+    const bypass = ctx?.bypassRls ? "true" : "false";
+    const userId = ctx?.userId ? String(ctx.userId) : "";
+    const isStoreAdmin = ctx?.isStoreAdmin ? "true" : "false";
+
+    if (ctx?.bypassRls) {
+      try {
+        await client.query("RESET ROLE;");
+      } catch (e) {}
+    } else {
+      try {
+        await client.query("SET ROLE prisma_application;");
+      } catch (e) {}
+    }
+
+    await client.query(
+      "SELECT set_config('app.current_tenant_id', $1, false), set_config('app.bypass_rls', $2, false), set_config('app.current_user_id', $3, false), set_config('app.is_store_admin', $4, false);",
+      [tid, bypass, userId, isStoreAdmin]
+    );
+    return client;
+  })();
+};
+
+const adapter = new PrismaPg(pool);
 
 const basePrisma = new PrismaClient({
   adapter,

@@ -54,10 +54,8 @@ export const fetchTenantResolutionServer = cache(
       const querySuffix = explicitSlug
         ? `?tenant=${encodeURIComponent(explicitSlug)}`
         : "";
-      // Always check live tenant status (exempt from rate limits and cached in backend RAM
-      // with instant invalidation on Suspend/Activate/Branding updates) so suspending a store
-      // takes effect immediately with zero stale SSR cache window.
-      const res = await fetch(`${API_BASE_URL}/tenants/resolve${querySuffix}`, {
+      const tenantTarget = explicitSlug || "smk";
+      const res = await fetch(`${API_BASE_URL}/${tenantTarget}/resolve${querySuffix}`, {
         headers: {
           Accept: "application/json",
           "ngrok-skip-browser-warning": "1",

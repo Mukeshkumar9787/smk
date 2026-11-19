@@ -7,12 +7,31 @@ const tenantStorage =
   globalThis.__smkTenantStorage ||
   (globalThis.__smkTenantStorage = new AsyncLocalStorage());
 
-export function runWithTenant(tenant, callback) {
+export function runWithTenant(tenant, callback, userContext = {}) {
+  const current = tenantStorage.getStore() || {};
   return tenantStorage.run(
     {
-      tenantId: tenant?.id || DEFAULT_TENANT_ID,
-      tenantSlug: tenant?.slug || DEFAULT_TENANT_SLUG,
-      tenant: tenant || null,
+      ...current,
+      tenantId: tenant?.id || current.tenantId || DEFAULT_TENANT_ID,
+      tenantSlug: tenant?.slug || current.tenantSlug || DEFAULT_TENANT_SLUG,
+      tenant: tenant || current.tenant || null,
+      userId: userContext.userId !== undefined ? userContext.userId : current.userId || null,
+      isStoreAdmin: userContext.isStoreAdmin !== undefined ? Boolean(userContext.isStoreAdmin) : Boolean(current.isStoreAdmin),
+      bypassRls: userContext.bypassRls !== undefined ? Boolean(userContext.bypassRls) : Boolean(current.bypassRls),
+    },
+    callback
+  );
+}
+
+export function runWithBypass(callback) {
+  const current = tenantStorage.getStore() || {};
+  return tenantStorage.run(
+    {
+      ...current,
+      tenantId: current.tenantId || DEFAULT_TENANT_ID,
+      tenantSlug: current.tenantSlug || DEFAULT_TENANT_SLUG,
+      tenant: current.tenant || null,
+      bypassRls: true,
     },
     callback
   );

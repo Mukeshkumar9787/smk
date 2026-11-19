@@ -3,6 +3,7 @@ import {
   DEFAULT_TENANT_ID,
   DEFAULT_TENANT_SLUG,
   runWithTenant,
+  runWithBypass,
 } from "../utils/tenantContext.js";
 
 const TENANT_CACHE_TTL_MS = 15_000;
@@ -68,75 +69,99 @@ const TENANT_INCLUDE = {
   plan: true,
 };
 
-export async function resolveTenant({ slug = null, host = null } = {}) {
-  const cleanSlug = slug ? String(slug).trim().toLowerCase() : null;
-  const cleanHost = normalizeHost(host);
-  const cacheKey = cleanSlug ? `slug:${cleanSlug}` : `host:${cleanHost || "default"}`;
+export async function resolveTenant({ idOrSlug = null, slug = null, id = null, host = null } = {}) {
+  return runWithBypass(async () => {
+    const identifier = idOrSlug || slug || id;
+    const cleanIdOrSlug = identifier ? String(identifier).trim() : null;
+    const cleanSlug = cleanIdOrSlug ? cleanIdOrSlug.toLowerCase() : null;
+    const cleanHost = normalizeHost(host);
+    const cacheKey = cleanSlug ? `id_or_slug:${cleanSlug}` : `host:${cleanHost || "default"}`;
 
-  const cached = getCached(cacheKey);
-  if (cached) return cached;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-  let tenant = null;
+    let tenant = null;
 
-  // 1. Explicit tenant slug (header X-Tenant-Slug or ?tenant=slug or /s/:slug)
-  if (cleanSlug) {
-    tenant = await rawPrisma.tenant.findUnique({
-      where: { slug: cleanSlug },
-      include: TENANT_INCLUDE,
-    });
-    if (tenant) {
-      setCached(cacheKey, tenant);
-      return tenant;
-    }
-    return null;
-  }
-
-  // 2. Match verified custom domain
-  if (cleanHost) {
-    tenant = await rawPrisma.tenant.findFirst({
-      where: {
-        customDomain: cleanHost,
-        customDomainVerified: true,
-      },
-      include: TENANT_INCLUDE,
-    });
-    if (tenant) {
-      setCached(cacheKey, tenant);
-      return tenant;
-    }
-
-    // 3. Match wildcard subdomain under PLATFORM_ROOT_DOMAIN or *.localhost
-    const subSlug = extractSubdomainSlug(cleanHost);
-    if (subSlug) {
+    // 1. Explicit tenant identifier from URL param or header or query
+    if (cleanSlug) {
+      // First try matching slug
       tenant = await rawPrisma.tenant.findUnique({
-        where: { slug: subSlug },
+        where: { slug: cleanSlug },
         include: TENANT_INCLUDE,
       });
+
+      // If not found by slug, try matching id
+      if (!tenant && cleanIdOrSlug) {
+        tenant = await rawPrisma.tenant.findUnique({
+          where: { id: cleanIdOrSlug },
+          include: TENANT_INCLUDE,
+        });
+      }
+
       if (tenant) {
         setCached(cacheKey, tenant);
         return tenant;
       }
       return null;
     }
-  }
 
-  // 4. Fallback to default SMK tenant (root / vercel.app / localhost)
-  tenant = await rawPrisma.tenant.findFirst({
-    where: {
-      OR: [{ isDefault: true }, { id: DEFAULT_TENANT_ID }, { slug: DEFAULT_TENANT_SLUG }],
-    },
-    include: TENANT_INCLUDE,
-    orderBy: { isDefault: "desc" },
+    // 2. Match verified custom domain
+    if (cleanHost) {
+      tenant = await rawPrisma.tenant.findFirst({
+        where: {
+          customDomain: cleanHost,
+          customDomainVerified: true,
+        },
+        include: TENANT_INCLUDE,
+      });
+      if (tenant) {
+        setCached(cacheKey, tenant);
+        return tenant;
+      }
+
+      // 3. Match wildcard subdomain under PLATFORM_ROOT_DOMAIN or *.localhost
+      const subSlug = extractSubdomainSlug(cleanHost);
+      if (subSlug) {
+        tenant = await rawPrisma.tenant.findUnique({
+          where: { slug: subSlug },
+          include: TENANT_INCLUDE,
+        });
+        if (tenant) {
+          setCached(cacheKey, tenant);
+          return tenant;
+        }
+        return null;
+      }
+    }
+
+    // 4. Fallback to default SMK tenant (root / vercel.app / localhost)
+    tenant = await rawPrisma.tenant.findFirst({
+      where: {
+        OR: [{ isDefault: true }, { id: DEFAULT_TENANT_ID }, { slug: DEFAULT_TENANT_SLUG }],
+      },
+      include: TENANT_INCLUDE,
+      orderBy: { isDefault: "desc" },
+    });
+
+    if (tenant) {
+      setCached(cacheKey, tenant);
+    }
+    return tenant;
   });
-
-  if (tenant) {
-    setCached(cacheKey, tenant);
-  }
-  return tenant;
 }
 
 export const tenantMiddleware = async (req, res, next) => {
   try {
+    // Strictly forbid or strip tenant id from request body as requested
+    if (req.body && typeof req.body === "object") {
+      delete req.body.tenantId;
+      delete req.body.tenant_id;
+      delete req.body.tenantSlug;
+      delete req.body.tenant;
+    }
+
+    // Read directly from backend URL parameter (:tenantId) first
+    const urlTenantId = req.params?.tenantId || null;
     const headerSlug = req.headers["x-tenant-slug"] || req.query?.tenant || null;
     const headerHost =
       req.headers["x-tenant-host"] ||
@@ -145,7 +170,7 @@ export const tenantMiddleware = async (req, res, next) => {
       "";
 
     const tenant = await resolveTenant({
-      slug: headerSlug ? String(headerSlug) : null,
+      idOrSlug: urlTenantId || headerSlug,
       host: String(headerHost),
     });
 
@@ -153,11 +178,18 @@ export const tenantMiddleware = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "Store not found",
+        code: "TENANT_NOT_FOUND",
       });
     }
 
     // Allow platform-level routes even if current host tenant is suspended
-    const isPlatformRoute = req.path.startsWith("/tenants/platform") || req.path.startsWith("/tenants/plans") || req.path.startsWith("/tenants/provision") || req.path.startsWith("/tenants/check-slug");
+    const isPlatformRoute =
+      req.path.startsWith("/tenants/platform") ||
+      req.path.startsWith("/platform") ||
+      req.path.startsWith("/tenants/plans") ||
+      req.path.startsWith("/tenants/provision") ||
+      req.path.startsWith("/tenants/check-slug");
+
     if (!isPlatformRoute && (tenant.status === "SUSPENDED" || tenant.status === "CANCELLED")) {
       return res.status(403).json({
         success: false,

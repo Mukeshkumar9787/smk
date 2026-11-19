@@ -24,13 +24,23 @@ axiosInstance.interceptors.request.use((config) => {
     if (token) {
       config.headers.authorization = `Bearer ${token}`; // eslint-disable-line
     }
+    const tenantSlug = typeof window !== "undefined" ? (getClientTenantSlug() || "smk") : "smk";
     if (typeof window !== "undefined") {
-      const tenantSlug = getClientTenantSlug();
       if (tenantSlug && !config.headers["x-tenant-slug"]) {
         config.headers["x-tenant-slug"] = tenantSlug;
       }
       if (window.location?.host && !config.headers["x-tenant-host"]) {
         config.headers["x-tenant-host"] = window.location.host;
+      }
+    }
+
+    // Prefix store endpoints with /:tenantId in URL directly
+    if (config.url) {
+      const cleanUrl = config.url.startsWith("/") ? config.url : `/${config.url}`;
+      const isPlatform = cleanUrl.startsWith("/platform");
+      const isHealth = cleanUrl.startsWith("/health");
+      if (!isPlatform && !isHealth && !cleanUrl.startsWith(`/${tenantSlug}/`) && cleanUrl !== `/${tenantSlug}`) {
+        config.url = `/${tenantSlug}${cleanUrl}`;
       }
     }
     const isGet = config.method?.toLowerCase() === "get";

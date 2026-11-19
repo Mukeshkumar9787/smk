@@ -3,7 +3,8 @@ import { rawPrisma } from "../prisma/client.js";
 import { hashedPassword } from "../utils/cryptoUtils.js";
 import { CONFIG_KEYS, STATUS_TYPES, TENANT_ROLES, TENANT_STATUS } from "../utils/constants.js";
 import { clearTenantCache } from "../middlewares/tenantMiddleware.js";
-import { getCurrentTenant, getCurrentTenantId } from "../utils/tenantContext.js";
+import { getCurrentTenant, getCurrentTenantId, runWithBypass } from "../utils/tenantContext.js";
+import { emitTenantLifecycleEvent } from "./tenantEventProducer.js";
 
 const RESERVED_SLUGS = new Set([
   "www",
@@ -191,8 +192,9 @@ const provisionTenant = async ({
 
   const passwordHash = await hashedPassword(ownerPassword);
 
-  const result = await rawPrisma.$transaction(async (tx) => {
-    const tenant = await tx.tenant.create({
+  const result = await runWithBypass(async () =>
+    rawPrisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
       data: {
         name: cleanStoreName,
         slug: slugCheck.slug,
@@ -299,9 +301,25 @@ const provisionTenant = async ({
     });
 
     return { tenant: { ...tenant, branding, plan }, owner };
-  });
+    })
+  );
 
   clearTenantCache();
+
+  // Notify Chatbot Service & Kafka of new tenant provisioning
+  emitTenantLifecycleEvent({
+    event: "TENANT_CREATED",
+    tenantId: result.tenant.id,
+    slug: result.tenant.slug,
+    name: result.tenant.name,
+    status: result.tenant.status,
+    aiChatbotEnabled: Boolean(plan?.aiChatbotEnabled),
+    planCode: plan?.code || "STARTER",
+    branding: {
+      storeName: cleanStoreName,
+      primaryColor: validPrimary,
+    },
+  }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
 
   const token = jwt.sign(
     { id: result.owner.id, tenantId: result.tenant.id },
@@ -465,7 +483,8 @@ const getCurrentSubscription = async () => {
 };
 
 const getPlatformOverview = async () => {
-  const [tenants, totalProducts, totalOrders, totalUsers, revenueAgg] = await Promise.all([
+  return runWithBypass(async () => {
+    const [tenants, totalProducts, totalOrders, totalUsers, revenueAgg] = await Promise.all([
     rawPrisma.tenant.findMany({
       include: {
         branding: true,
@@ -525,66 +544,101 @@ const getPlatformOverview = async () => {
       primaryColor: t.branding?.primaryColor || "#3C50E0",
       logoUrl: t.branding?.logoUrl || null,
       owner: t.users?.[0] || null,
-      counts: t._count,
-      createdAt: t.createdAt,
-    })),
-  };
+        counts: t._count,
+        createdAt: t.createdAt,
+      })),
+    };
+  });
 };
 
 const updateTenantPlan = async ({ tenantId, planCode }) => {
-  const targetPlan = await rawPrisma.plan.findUnique({
-    where: { code: String(planCode).toUpperCase() },
-  });
-  if (!targetPlan) {
-    const err = new Error(`Plan ${planCode} not found`);
-    err.statusCode = 404;
-    throw err;
-  }
-
-  const updated = await rawPrisma.tenant.update({
-    where: { id: tenantId },
-    data: { planId: targetPlan.id },
-    include: { plan: true, branding: true },
-  });
-
-  if (!targetPlan.aiChatbotEnabled && !updated.isDefault && updated.branding?.aiChatbotActive) {
-    await rawPrisma.tenantBranding.update({
-      where: { tenantId },
-      data: { aiChatbotActive: false },
+  return runWithBypass(async () => {
+    const targetPlan = await rawPrisma.plan.findUnique({
+      where: { code: String(planCode).toUpperCase() },
     });
-  }
+    if (!targetPlan) {
+      const err = new Error(`Plan ${planCode} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
 
-  clearTenantCache();
-  return formatPublicTenant(updated);
+    const updated = await rawPrisma.tenant.update({
+      where: { id: tenantId },
+      data: { planId: targetPlan.id },
+      include: { plan: true, branding: true },
+    });
+
+    if (!targetPlan.aiChatbotEnabled && !updated.isDefault && updated.branding?.aiChatbotActive) {
+      await rawPrisma.tenantBranding.update({
+        where: { tenantId },
+        data: { aiChatbotActive: false },
+      });
+    }
+
+    clearTenantCache();
+
+    // Notify Chatbot Service & Kafka of plan change and chatbot capability toggle
+    emitTenantLifecycleEvent({
+      event: "TENANT_PLAN_UPDATED",
+      tenantId: updated.id,
+      slug: updated.slug,
+      name: updated.name,
+      status: updated.status,
+      aiChatbotEnabled: Boolean(targetPlan.aiChatbotEnabled || updated.isDefault),
+      planCode: targetPlan.code,
+      branding: {
+        storeName: updated.branding?.storeName || updated.name,
+      },
+    }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
+
+    return formatPublicTenant(updated);
+  });
 };
 
 const updateTenantStatus = async ({ tenantId, status }) => {
-  const allowed = new Set(Object.values(TENANT_STATUS));
-  if (!allowed.has(status)) {
-    const err = new Error("Invalid tenant status");
-    err.statusCode = 400;
-    throw err;
-  }
+  return runWithBypass(async () => {
+    const allowed = new Set(Object.values(TENANT_STATUS));
+    if (!allowed.has(status)) {
+      const err = new Error("Invalid tenant status");
+      err.statusCode = 400;
+      throw err;
+    }
 
-  const target = await rawPrisma.tenant.findUnique({ where: { id: tenantId } });
-  if (!target) {
-    const err = new Error("Store not found");
-    err.statusCode = 404;
-    throw err;
-  }
-  if (target.isDefault && (status === TENANT_STATUS.SUSPENDED || status === TENANT_STATUS.CANCELLED)) {
-    const err = new Error("Cannot suspend the primary platform store.");
-    err.statusCode = 400;
-    throw err;
-  }
+    const target = await rawPrisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { plan: true },
+    });
+    if (!target) {
+      const err = new Error("Store not found");
+      err.statusCode = 404;
+      throw err;
+    }
+    if (target.isDefault && (status === TENANT_STATUS.SUSPENDED || status === TENANT_STATUS.CANCELLED)) {
+      const err = new Error("Cannot suspend the primary platform store.");
+      err.statusCode = 400;
+      throw err;
+    }
 
-  const updated = await rawPrisma.tenant.update({
-    where: { id: tenantId },
-    data: { status },
+    const updated = await rawPrisma.tenant.update({
+      where: { id: tenantId },
+      data: { status },
+    });
+
+    clearTenantCache();
+
+    // Notify Chatbot Service & Kafka of tenant status change
+    emitTenantLifecycleEvent({
+      event: "TENANT_STATUS_UPDATED",
+      tenantId: updated.id,
+      slug: updated.slug,
+      name: updated.name,
+      status: updated.status,
+      aiChatbotEnabled: Boolean(target.plan?.aiChatbotEnabled || target.isDefault),
+      planCode: target.plan?.code,
+    }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
+
+    return updated;
   });
-
-  clearTenantCache();
-  return updated;
 };
 
 export default {

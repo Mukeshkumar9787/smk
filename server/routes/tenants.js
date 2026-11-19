@@ -1,17 +1,12 @@
 import express from "express";
 import tenantController from "../controllers/tenants.js";
-import { getAuthMiddleware, requirePlatformAdmin } from "../middlewares/authMiddleware.js";
+import { getAuthMiddleware } from "../middlewares/authMiddleware.js";
 import { ROLE_TYPES } from "../utils/constants.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
-// Public multi-tenant resolution endpoint
+// Public store resolution endpoint for this tenant
 router.get("/resolve", tenantController.resolveCurrentTenant);
-
-// Platform Super Admin store creation & provisioning endpoints
-router.get("/plans", requirePlatformAdmin, tenantController.listPlans);
-router.get("/check-slug/:slug", requirePlatformAdmin, tenantController.checkSlug);
-router.post("/provision", requirePlatformAdmin, tenantController.provision);
 
 // Current store owner / admin endpoints
 router.get(
@@ -28,28 +23,6 @@ router.get(
   "/current/subscription",
   getAuthMiddleware([ROLE_TYPES.ADMIN]),
   tenantController.getCurrentSubscription
-);
-
-// Platform Super Admin endpoints (mukeshkumar87086@gmail.com)
-router.get(
-  "/platform/overview",
-  requirePlatformAdmin,
-  tenantController.getPlatformOverview
-);
-router.post(
-  "/platform/create",
-  requirePlatformAdmin,
-  tenantController.createPlatformTenant
-);
-router.patch(
-  "/platform/:tenantId/status",
-  requirePlatformAdmin,
-  tenantController.updateTenantStatus
-);
-router.patch(
-  "/platform/:tenantId/plan",
-  requirePlatformAdmin,
-  tenantController.updateTenantPlan
 );
 
 export default router;

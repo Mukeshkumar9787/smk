@@ -2,7 +2,7 @@ import assert from "assert";
 import jwt from "jsonwebtoken";
 import prisma, { rawPrisma } from "../prisma/client.js";
 import { resolveTenant } from "../middlewares/tenantMiddleware.js";
-import { runWithTenant } from "../utils/tenantContext.js";
+import { runWithTenant, runWithBypass } from "../utils/tenantContext.js";
 import tenantService from "../services/tenants.js";
 import productService from "../services/products.js";
 import categoryService from "../services/categories.js";
@@ -258,15 +258,18 @@ try {
 
   console.log("✅ ALL MULTI-TENANT & PER-TENANT USER ISOLATION TESTS PASSED!");
 } finally {
-  if (smkCustomerId) {
-    await rawPrisma.user.delete({ where: { id: smkCustomerId } }).catch(() => {});
-  }
-  if (storeBCustomerId) {
-    await rawPrisma.user.delete({ where: { id: storeBCustomerId } }).catch(() => {});
-  }
-  if (createdTenantId) {
-    // Deleting the tenant cascades its TenantBranding, Categories, Sizes, Colors, Configs, and Users
-    await rawPrisma.tenant.delete({ where: { id: createdTenantId } }).catch(() => {});
-  }
+  await runWithBypass(async () => {
+    if (smkCustomerId) {
+      await rawPrisma.user.delete({ where: { id: smkCustomerId } }).catch(() => {});
+    }
+    if (storeBCustomerId) {
+      await rawPrisma.user.delete({ where: { id: storeBCustomerId } }).catch(() => {});
+    }
+    if (createdTenantId) {
+      // Deleting the tenant cascades its TenantBranding, Categories, Sizes, Colors, Configs, and Users
+      await rawPrisma.tenant.delete({ where: { id: createdTenantId } }).catch(() => {});
+    }
+  });
   await rawPrisma.$disconnect();
+  process.exit(0);
 }
