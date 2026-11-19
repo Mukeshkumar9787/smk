@@ -16,7 +16,7 @@ export interface TurnstileRef {
 interface TurnstileWidgetProps {
   onVerify: (token: string) => void;
   onExpire?: () => void;
-  onError?: () => void;
+  onError?: (errorCode?: any) => void;
   className?: string;
   theme?: "light" | "dark" | "auto";
   resetKey?: any;
@@ -64,11 +64,13 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
     const latestTokenRef = useRef<string>("");
     const pendingResolvers = useRef<((token: string) => void)[]>([]);
     const [, setScriptLoaded] = useState(false);
+    const [turnstileError, setTurnstileError] = useState<string | null>(null);
 
     const siteKey = process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY;
 
     const resetWidget = () => {
       latestTokenRef.current = "";
+      setTurnstileError(null);
       onVerify("");
       if (widgetIdRef.current && window.turnstile) {
         try {
@@ -82,6 +84,10 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
     const getToken = async (): Promise<string> => {
       // In dev or when no siteKey is provided, resolve immediately
       if (!siteKey || typeof window === "undefined") {
+        return "";
+      }
+
+      if (turnstileError) {
         return "";
       }
 
@@ -115,7 +121,7 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
             completed = true;
             resolve(latestTokenRef.current || "");
           }
-        }, 3000);
+        }, 8000);
 
         pendingResolvers.current.push((t: string) => {
           if (!completed) {
@@ -185,10 +191,13 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
               pendingResolvers.current = [];
               resolvers.forEach((r) => r(""));
             },
-            "error-callback": () => {
+            "error-callback": (error: any) => {
+              const errStr = typeof error === "string" ? error : error?.code || String(error || "");
+              console.warn("[TurnstileWidget] Cloudflare error:", errStr);
               latestTokenRef.current = "";
+              setTurnstileError(errStr);
               onVerify("");
-              if (onError) onError();
+              if (onError) onError(errStr);
               const resolvers = [...pendingResolvers.current];
               pendingResolvers.current = [];
               resolvers.forEach((r) => r(""));
@@ -259,8 +268,18 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
     }
 
     return (
-      <div className={`flex justify-center items-center ${className}`}>
+      <div className={`flex flex-col justify-center items-center ${className}`}>
         <div ref={containerRef} />
+        {turnstileError && (
+          <div className="mt-2 w-full rounded-2xl border border-amber-300 bg-amber-50 p-2.5 text-center text-xs text-amber-900 leading-snug">
+            ⚠️ <strong>Cloudflare Turnstile Error {turnstileError === "600010" ? "600010 (Domain Mismatch)" : `(${turnstileError})`}:</strong>
+            <p className="mt-1 text-[11px] text-amber-800">
+              {turnstileError === "600010"
+                ? `Domain '${typeof window !== "undefined" ? window.location.hostname : ""}' must be added to Allowed Domains in Cloudflare Dashboard for this sitekey.`
+                : "Security verification could not be completed by Cloudflare."}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
