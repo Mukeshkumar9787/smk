@@ -39,6 +39,7 @@ export default function ChatbotAssistant() {
   if (storeDisplayName) queryParams.set("storeName", storeDisplayName);
   if (branding?.primaryColor) queryParams.set("primaryColor", branding.primaryColor);
   if (branding?.accentColor) queryParams.set("accentColor", branding.accentColor);
+  if (branding?.fontFamily) queryParams.set("fontFamily", branding.fontFamily);
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
   const finalScriptSrc = `${scriptSrc}${queryString}`;
 
@@ -52,6 +53,7 @@ export default function ChatbotAssistant() {
       data-store-name={storeDisplayName}
       data-primary-color={branding?.primaryColor || ""}
       data-accent-color={branding?.accentColor || ""}
+      data-font-family={branding?.fontFamily || ""}
     />
   );
 }

@@ -9,7 +9,7 @@ import {
   uploadFile,
 } from "@/http/apiCalls";
 import { useTenant } from "@/app/context/TenantContext";
-import { THEME_PRESETS, darkenHex } from "@/lib/theme";
+import { THEME_PRESETS, FONT_OPTIONS, darkenHex } from "@/lib/theme";
 import { notifyError, notifySuccess } from "@/utils/notify";
 
 const BrandingPage = () => {
@@ -23,6 +23,7 @@ const BrandingPage = () => {
     accentColor: branding.accentColor || "#0EA5E9",
     backgroundColor: branding.backgroundColor || "#F6FAFF",
     textPrimaryColor: branding.textPrimaryColor || "#1C274C",
+    fontFamily: branding.fontFamily || "Euclid Circular A",
     seoTitle: branding.seoTitle || "",
     seoDescription: branding.seoDescription || "",
     aiChatbotActive: branding.aiChatbotActive !== false,
@@ -50,6 +51,7 @@ const BrandingPage = () => {
             accentColor: b.accentColor || "#0EA5E9",
             backgroundColor: b.backgroundColor || "#F6FAFF",
             textPrimaryColor: b.textPrimaryColor || "#1C274C",
+            fontFamily: b.fontFamily || "Euclid Circular A",
             seoTitle: b.seoTitle || "",
             seoDescription: b.seoDescription || "",
             aiChatbotActive: b.aiChatbotActive !== false,
@@ -426,10 +428,71 @@ const BrandingPage = () => {
           ))}
         </div>
 
+        {/* Typography & Brand Font Selection */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🔤</span>
+                <h3 className="text-base font-semibold text-dark">
+                  Typography &amp; Store Font Family
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Select your preferred typeface. Changes reflect dynamically across your storefront and AI chatbot widget.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+              Active: <strong className="font-semibold text-blue">{form.fontFamily || "Euclid Circular A"}</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {FONT_OPTIONS.map((f) => {
+              const isSelected = (form.fontFamily || "Euclid Circular A").toLowerCase() === f.name.toLowerCase();
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => applyField("fontFamily", f.name)}
+                  className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left transition ${
+                    isSelected
+                      ? "border-blue bg-blue-light-5/50 ring-2 ring-blue/20 shadow-sm"
+                      : "border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-white"
+                  }`}
+                  style={{ fontFamily: f.family }}
+                >
+                  <div className="flex items-start justify-between w-full">
+                    <div>
+                      <p className="text-sm font-bold text-dark group-hover:text-blue transition-colors">
+                        {f.name}
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-sans mt-0.5">
+                        {f.description}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue text-white text-[10px] font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs text-slate-700 shadow-2xs">
+                    <span className="text-xs">Aa Bb Gg 123 — The quick brown fox jumps</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Live Preview Card */}
         <div
           className="rounded-3xl border border-slate-200 p-6 transition"
-          style={{ backgroundColor: form.backgroundColor }}
+          style={{
+            backgroundColor: form.backgroundColor,
+            fontFamily: form.fontFamily ? `"${form.fontFamily}", sans-serif` : undefined,
+          }}
         >
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             Live Storefront Preview

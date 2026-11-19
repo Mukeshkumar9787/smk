@@ -11,6 +11,7 @@ export interface TenantBranding {
   textPrimaryColor: string;
   seoTitle?: string;
   seoDescription?: string;
+  fontFamily?: string;
   aiChatbotActive?: boolean;
 }
 
@@ -67,6 +68,7 @@ export const DEFAULT_TENANT: PublicTenant = {
     seoTitle: "SMK | Online Shopping Store",
     seoDescription:
       "Shop curated collections, everyday essentials, and new arrivals at SMK with transparent pricing, real-time stock availability, and secure online checkout.",
+    fontFamily: "Euclid Circular A",
     aiChatbotActive: true,
   },
 };
@@ -138,6 +140,58 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
 ];
 
+export interface FontOption {
+  id: string;
+  name: string;
+  family: string;
+  description: string;
+}
+
+export const FONT_OPTIONS: FontOption[] = [
+  {
+    id: "euclid-circular-a",
+    name: "Euclid Circular A",
+    family: "'Euclid Circular A', sans-serif",
+    description: "Signature modern geometric font",
+  },
+  {
+    id: "inter",
+    name: "Inter",
+    family: "'Inter', sans-serif",
+    description: "Crisp, clean & modern sans-serif",
+  },
+  {
+    id: "poppins",
+    name: "Poppins",
+    family: "'Poppins', sans-serif",
+    description: "Geometric, friendly & engaging",
+  },
+  {
+    id: "plus-jakarta-sans",
+    name: "Plus Jakarta Sans",
+    family: "'Plus Jakarta Sans', sans-serif",
+    description: "Contemporary premium neo-grotesque",
+  },
+  {
+    id: "outfit",
+    name: "Outfit",
+    family: "'Outfit', sans-serif",
+    description: "Sleek, rounded modern tech aesthetic",
+  },
+  {
+    id: "roboto",
+    name: "Roboto",
+    family: "'Roboto', sans-serif",
+    description: "Balanced, neutral & highly legible",
+  },
+  {
+    id: "playfair-display",
+    name: "Playfair Display",
+    family: "'Playfair Display', serif",
+    description: "Sophisticated editorial & luxury serif",
+  },
+];
+
 const HEX_RE = /^#?[0-9A-Fa-f]{6}$/;
 
 export function hexToRgbTriplet(hex: string, fallback = "60 80 224"): string {
@@ -172,6 +226,8 @@ export function buildThemeCssVariables(branding?: Partial<TenantBranding>): Reco
   const primaryLight = lightenHex(b.primaryColor, 0.22);
   const primarySoft = lightenHex(b.primaryColor, 0.88);
   const primaryDark = b.primaryDarkColor || darkenHex(b.primaryColor);
+  const chosenFont = b.fontFamily || "Euclid Circular A";
+  const fontCssValue = chosenFont.includes(",") ? chosenFont : `"${chosenFont}", sans-serif`;
 
   return {
     "--brand-primary": hexToRgbTriplet(b.primaryColor, "60 80 224"),
@@ -183,5 +239,6 @@ export function buildThemeCssVariables(branding?: Partial<TenantBranding>): Reco
     "--app-bg": b.backgroundColor || "#F6FAFF",
     "--surface": b.surfaceColor || "#FFFFFF",
     "--text-primary": b.textPrimaryColor || "#1C274C",
+    "--font-family-body": fontCssValue,
   };
 }

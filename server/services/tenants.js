@@ -98,6 +98,7 @@ export function formatPublicTenant(tenant) {
       backgroundColor: branding.backgroundColor || "#F6FAFF",
       surfaceColor: branding.surfaceColor || "#FFFFFF",
       textPrimaryColor: branding.textPrimaryColor || "#1C274C",
+      fontFamily: branding.fontFamily || "Euclid Circular A",
       seoTitle: branding.seoTitle || `${branding.storeName || tenant.name} | Online Store`,
       seoDescription:
         branding.seoDescription ||
@@ -231,6 +232,7 @@ const provisionTenant = async ({
         backgroundColor: "#F6FAFF",
         surfaceColor: "#FFFFFF",
         textPrimaryColor: "#1C274C",
+        fontFamily: payload.fontFamily || "Euclid Circular A",
         seoTitle: `${cleanStoreName} | Online Store`,
         seoDescription: `Shop products from ${cleanStoreName} online with transparent pricing and secure checkout.`,
         aiChatbotActive: isChatbotAllowed,
@@ -385,6 +387,7 @@ const updateCurrentBranding = async (payload = {}) => {
   const backgroundColor = pickHex(payload.backgroundColor, current.branding?.backgroundColor || "#F6FAFF");
   const surfaceColor = pickHex(payload.surfaceColor, current.branding?.surfaceColor || "#FFFFFF");
   const textPrimaryColor = pickHex(payload.textPrimaryColor, current.branding?.textPrimaryColor || "#1C274C");
+  const fontFamily = payload.fontFamily !== undefined ? String(payload.fontFamily).trim() : current.branding?.fontFamily || "Euclid Circular A";
 
   const data = {
     storeName,
@@ -397,6 +400,7 @@ const updateCurrentBranding = async (payload = {}) => {
     backgroundColor,
     surfaceColor,
     textPrimaryColor,
+    fontFamily,
     seoTitle:
       payload.seoTitle !== undefined
         ? String(payload.seoTitle || "").trim() || `${storeName} | Online Store`
@@ -433,6 +437,7 @@ const updateCurrentBranding = async (payload = {}) => {
       storeName: data.storeName || current.name,
       primaryColor: data.primaryColor || current.branding?.primaryColor,
       accentColor: data.accentColor || current.branding?.accentColor,
+      fontFamily: data.fontFamily || current.branding?.fontFamily || "Euclid Circular A",
     },
   }).catch((e) => console.warn("[Tenant Sync Warning]:", e.message));
 
