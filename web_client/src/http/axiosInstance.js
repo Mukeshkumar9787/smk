@@ -1,5 +1,5 @@
 import { getStoredToken, redirectToSignIn } from '@/utils/helper';
-import { getClientTenantSlug, stripTenantPrefix } from '@/lib/tenantUrl';
+import { getClientTenantSlug, getTenantStorageKey, stripTenantPrefix } from '@/lib/tenantUrl';
 import axios from 'axios';
 import { message } from 'antd';
 import { decrementGetRequest, incrementGetRequest } from './apiLoader';
@@ -204,6 +204,15 @@ axiosInstance.interceptors.response.use((response) => {
       config?.url?.includes('/platform') ||
       config?.url?.includes('/auth/platform')
     );
+    const isUserInfoApi = Boolean(config?.url?.includes('/user/info'));
+    const isPublicLocation = typeof window !== 'undefined' && (
+      stripTenantPrefix(window.location.pathname) === '/' ||
+      stripTenantPrefix(window.location.pathname) === '' ||
+      stripTenantPrefix(window.location.pathname).startsWith('/shop') ||
+      stripTenantPrefix(window.location.pathname).startsWith('/contact') ||
+      stripTenantPrefix(window.location.pathname).startsWith('/cart') ||
+      stripTenantPrefix(window.location.pathname).startsWith('/categories')
+    );
     const isAuthRoute = typeof window !== 'undefined' && (
       stripTenantPrefix(window.location.pathname) === '/signin' ||
       stripTenantPrefix(window.location.pathname) === '/signup' ||
@@ -215,12 +224,22 @@ axiosInstance.interceptors.response.use((response) => {
       config?.skipAuthRedirect ||
       isPlatformLocation ||
       isPlatformApi ||
-      isAuthRoute
+      isAuthRoute ||
+      isUserInfoApi ||
+      isPublicLocation
     );
 
     if (error.response && error.response.status === 401) {
-      if (typeof window !== 'undefined' && !shouldSkipRedirect) {
-        redirectToSignIn();
+      if (typeof window !== 'undefined') {
+        const tenantSlug = getClientTenantSlug();
+        if (tenantSlug) {
+          localStorage.removeItem(getTenantStorageKey('token'));
+        } else {
+          localStorage.removeItem('token');
+        }
+        if (!shouldSkipRedirect) {
+          redirectToSignIn();
+        }
       }
     } else {
       const errorMsg = error?.response?.data?.errors || error?.response?.data?.message || 'Something went wrong';

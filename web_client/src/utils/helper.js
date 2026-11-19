@@ -1,12 +1,18 @@
 import { getUserInfo } from "@/http/apiCalls";
-import { getTenantStorageKey, withTenantPath } from "@/lib/tenantUrl";
+import { getClientTenantSlug, getTenantStorageKey, withTenantPath } from "@/lib/tenantUrl";
 import { DASHBOARD_URL } from "./appUrls";
 import { ORDER_STATUS } from "./constants";
 import { ROLE_TYPES } from "./constants";
 
 const clearExpiredSession = () => {
-  localStorage.removeItem(getTenantStorageKey("token"));
-  localStorage.removeItem(getTenantStorageKey("cart"));
+  const tenantSlug = getClientTenantSlug();
+  if (tenantSlug) {
+    localStorage.removeItem(getTenantStorageKey("token"));
+    localStorage.removeItem(getTenantStorageKey("loginToProceed"));
+  } else {
+    localStorage.removeItem("token");
+    localStorage.removeItem("loginToProceed");
+  }
   localStorage.removeItem("platform_token");
   localStorage.removeItem("platform_admin");
 };
@@ -41,9 +47,16 @@ export const getStoredToken = () => {
   if (typeof window === "undefined") return null;
 
   const isPlatformAdminRoute = window.location?.pathname?.startsWith("/platform-admin");
-  const token = isPlatformAdminRoute
-    ? localStorage.getItem("platform_token") || localStorage.getItem(getTenantStorageKey("token")) || localStorage.getItem("token")
-    : localStorage.getItem(getTenantStorageKey("token")) || localStorage.getItem("token") || localStorage.getItem("platform_token");
+  const tenantSlug = getClientTenantSlug();
+
+  let token = null;
+  if (isPlatformAdminRoute) {
+    token = localStorage.getItem("platform_token");
+  } else if (tenantSlug) {
+    token = localStorage.getItem(getTenantStorageKey("token"));
+  } else {
+    token = localStorage.getItem("token") || localStorage.getItem(getTenantStorageKey("token"));
+  }
 
   if (!token) return null;
 
@@ -179,9 +192,18 @@ export const getMemberSince = (createdAt) => {
 };
 
 export const logout = () => {
-  localStorage.removeItem(getTenantStorageKey('token'));
-  window.location.href = withTenantPath('/');
-}
+  const tenantSlug = getClientTenantSlug();
+  if (tenantSlug) {
+    localStorage.removeItem(getTenantStorageKey("token"));
+    localStorage.removeItem(getTenantStorageKey("loginToProceed"));
+    localStorage.removeItem(getTenantStorageKey("next"));
+  } else {
+    localStorage.removeItem("token");
+    localStorage.removeItem("loginToProceed");
+    localStorage.removeItem("next");
+  }
+  window.location.href = withTenantPath("/");
+};
 
 export const redirectToSignIn = (next=null) => {
   // Keep persisted cart/wishlist and only clear auth/session markers for this store.

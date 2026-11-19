@@ -241,7 +241,11 @@ export async function loginWithOTP(data) {
 }
 
 export async function getUserInfo(data) {
-  const res = await axiosInstance.get(API_USER_INFO, data );
+  const res = await axiosInstance.get(API_USER_INFO, {
+    ...data,
+    skipAuthRedirect: true,
+    skipErrorToast: true,
+  });
   return res.data;
 }
 
