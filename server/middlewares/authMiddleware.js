@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import userService from "../services/users.js";
 import { ROLE_TYPES, TENANT_ROLES } from "../utils/constants.js";
 import { DEFAULT_TENANT_ID, getCurrentTenantId } from "../utils/tenantContext.js";
+import { rawPrisma } from "../prisma/client.js";
 
 const PLATFORM_ADMIN_EMAILS = new Set(
   (process.env.PLATFORM_ADMIN_EMAILS || "mukeshkumar87086@gmail.com")
@@ -30,6 +31,30 @@ export const getAuthMiddleware = (allowedRoles = []) => {
 
       const token = authHeader.split(" ")[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Decoupled Platform Super Admin authentication directly via PlatformAdmin table
+      if (decoded.isPlatformAdmin && decoded.email) {
+        const platformAdmin = await rawPrisma.platformAdmin.findUnique({
+          where: { email: String(decoded.email).trim().toLowerCase() },
+        });
+
+        if (platformAdmin) {
+          req.user = {
+            id: platformAdmin.id,
+            email: platformAdmin.email,
+            name: platformAdmin.name,
+            isPlatformAdmin: true,
+            tenantRole: "PLATFORM_ADMIN",
+            role: ROLE_TYPES.ADMIN,
+          };
+
+          if (allowedRoles.length === 0 || allowedRoles.includes(ROLE_TYPES.ADMIN)) {
+            next();
+            return;
+          }
+          return res.status(403).json({ message: "Forbidden: Insufficient platform permissions" });
+        }
+      }
 
       const tenantId = req.tenant?.id || getCurrentTenantId();
       if (decoded.tenantId && tenantId && decoded.tenantId !== tenantId) {

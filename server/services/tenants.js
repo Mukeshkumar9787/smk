@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { rawPrisma } from "../prisma/client.js";
-import { hashedPassword } from "../utils/cryptoUtils.js";
+import { hashedPassword, comparePassword } from "../utils/cryptoUtils.js";
 import { CONFIG_KEYS, STATUS_TYPES, TENANT_ROLES, TENANT_STATUS } from "../utils/constants.js";
 import { clearTenantCache } from "../middlewares/tenantMiddleware.js";
 import { getCurrentTenant, getCurrentTenantId, runWithBypass } from "../utils/tenantContext.js";
@@ -641,6 +641,76 @@ const updateTenantStatus = async ({ tenantId, status }) => {
   });
 };
 
+export const authenticatePlatformAdmin = async ({ email, password }) => {
+  if (!email || !password) {
+    const error = new Error("Email and password are required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const admin = await rawPrisma.platformAdmin.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (!admin) {
+    const error = new Error("Invalid platform administrator credentials");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  let isMatch = false;
+  if (admin.password) {
+    isMatch = await comparePassword(password, admin.password);
+  }
+
+  // Fallback: If not set in PlatformAdmin, verify against user account
+  if (!isMatch) {
+    const userAccount = await rawPrisma.user.findFirst({
+      where: { email: normalizedEmail, password: { not: null } },
+    });
+    if (userAccount && userAccount.password) {
+      const userMatch = await comparePassword(password, userAccount.password);
+      if (userMatch) {
+        isMatch = true;
+        // Self-heal and sync password into PlatformAdmin table
+        await rawPrisma.platformAdmin.update({
+          where: { id: admin.id },
+          data: { password: userAccount.password },
+        });
+      }
+    }
+  }
+
+  if (!isMatch) {
+    const error = new Error("Invalid platform administrator credentials");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const token = jwt.sign(
+    {
+      id: admin.id,
+      email: admin.email,
+      name: admin.name || "Platform Admin",
+      isPlatformAdmin: true,
+      tenantRole: "PLATFORM_ADMIN",
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  return {
+    token,
+    admin: {
+      id: admin.id,
+      email: admin.email,
+      name: admin.name || "Platform Admin",
+      isPlatformAdmin: true,
+    },
+  };
+};
+
 export default {
   formatPublicTenant,
   listPlans,
@@ -652,4 +722,5 @@ export default {
   getPlatformOverview,
   updateTenantStatus,
   updateTenantPlan,
+  authenticatePlatformAdmin,
 };

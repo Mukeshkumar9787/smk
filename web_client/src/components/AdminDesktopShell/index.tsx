@@ -30,13 +30,17 @@ const AdminDesktopShell = ({ children }: { children: React.ReactNode }) => {
     [isPlatformAdmin, tenant?.isDefault]
   );
   const isAdminPage =
-    pathname === PLATFORM_ADMIN_URL ||
-    pathname.startsWith(`${PLATFORM_ADMIN_URL}/`) ||
+    (pathname === PLATFORM_ADMIN_URL ||
+    (pathname.startsWith(`${PLATFORM_ADMIN_URL}/`) && pathname !== `${PLATFORM_ADMIN_URL}/login`) ||
     pathname === LAUNCH_STORE_URL ||
     pathname.startsWith(`${LAUNCH_STORE_URL}/`) ||
     adminLinks.some((item) =>
       item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false
-    );
+    ));
+
+  if (pathname === `${PLATFORM_ADMIN_URL}/login`) {
+    return <>{children}</>;
+  }
 
   React.useEffect(() => {
     const loadUser = async () => {

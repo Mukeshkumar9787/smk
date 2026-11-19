@@ -134,6 +134,33 @@ const updateTenantPlan = async (req, res) => {
   }
 };
 
+const platformLogin = async (req, res) => {
+  try {
+    const data = await tenantService.authenticatePlatformAdmin({
+      email: req.body?.email,
+      password: req.body?.password,
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Platform admin authenticated successfully",
+      data,
+    });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
+const getPlatformMe = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      data: req.user,
+    });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
 export default {
   resolveCurrentTenant,
   listPlans,
@@ -146,4 +173,6 @@ export default {
   updateTenantStatus,
   createPlatformTenant,
   updateTenantPlan,
+  platformLogin,
+  getPlatformMe,
 };

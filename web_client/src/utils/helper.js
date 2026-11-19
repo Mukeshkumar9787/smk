@@ -38,7 +38,11 @@ export const isTokenExpired = (token) => {
 export const getStoredToken = () => {
   if (typeof window === "undefined") return null;
 
-  const token = localStorage.getItem(getTenantStorageKey("token"));
+  const isPlatformAdminRoute = window.location?.pathname?.startsWith("/platform-admin");
+  const token = isPlatformAdminRoute
+    ? localStorage.getItem("platform_token") || localStorage.getItem(getTenantStorageKey("token")) || localStorage.getItem("token")
+    : localStorage.getItem(getTenantStorageKey("token")) || localStorage.getItem("token") || localStorage.getItem("platform_token");
+
   if (!token) return null;
 
   if (isTokenExpired(token)) {

@@ -44,6 +44,7 @@ export const API_TENANTS_RESOLVE = `/resolve`;
 export const API_TENANTS_CURRENT_BRANDING = `${API_TENANTS}/current/branding`;
 export const API_TENANTS_CURRENT_SUBSCRIPTION = `${API_TENANTS}/current/subscription`;
 export const API_PLATFORM = '/platform';
+export const API_PLATFORM_LOGIN = `${API_PLATFORM}/auth/login`;
 export const API_TENANTS_PLANS = `${API_PLATFORM}/plans`;
 export const API_TENANTS_CHECK_SLUG = (slug) => `${API_PLATFORM}/check-slug/${encodeURIComponent(slug)}`;
 export const API_TENANTS_PROVISION = `${API_PLATFORM}/provision`;

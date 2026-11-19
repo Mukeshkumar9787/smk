@@ -118,10 +118,21 @@ export default function PlatformAdmin() {
     return (
       <section className="page-section">
         <div className="mx-auto max-w-[700px] rounded-3xl border border-red-light-4 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-2xl text-rose-600">
+            🛡️
+          </div>
           <h1 className="text-xl font-semibold text-dark">Super Admin Access Required</h1>
           <p className="mt-2 text-sm text-dark-4">
             {error || "This console is restricted to platform Super Admin accounts."}
           </p>
+          <div className="mt-6">
+            <a
+              href="/platform-admin/login"
+              className="inline-flex min-h-[44px] items-center rounded-xl bg-blue px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-dark"
+            >
+              Sign In as Platform Admin &rarr;
+            </a>
+          </div>
         </div>
       </section>
     );
@@ -146,13 +157,27 @@ export default function PlatformAdmin() {
               Manage every tenant store, plan allocation, status, and platform-wide metrics.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCreate((prev) => !prev)}
-            className="inline-flex min-h-[44px] items-center rounded-2xl bg-blue px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-dark"
-          >
-            {showCreate ? "Close Form" : "+ Provision New Store"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem("platform_token");
+                localStorage.removeItem("token");
+                localStorage.removeItem("platform_admin");
+                window.location.href = "/platform-admin/login";
+              }}
+              className="inline-flex min-h-[44px] items-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            >
+              Sign Out
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate((prev) => !prev)}
+              className="inline-flex min-h-[44px] items-center rounded-2xl bg-blue px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-dark cursor-pointer"
+            >
+              {showCreate ? "Close Form" : "+ Provision New Store"}
+            </button>
+          </div>
         </div>
 
         {/* Metrics */}
