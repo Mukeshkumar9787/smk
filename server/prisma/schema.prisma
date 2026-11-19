@@ -73,6 +73,16 @@ model Plan {
   subscriptions          Subscription[]
 }
 
+model PlatformAdmin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
 model Tenant {
   id                   String                @id @default(cuid())
   name                 String
@@ -169,7 +179,6 @@ model User {
   mobile               String?
   role                 Role                  @default(USER)
   tenantRole           TenantRole            @default(CUSTOMER)
-  isPlatformAdmin      Boolean               @default(false)
   status               Status                @default(ACTIVE)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt

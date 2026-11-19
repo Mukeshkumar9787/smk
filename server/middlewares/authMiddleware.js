@@ -12,12 +12,11 @@ const PLATFORM_ADMIN_EMAILS = new Set(
 
 export function isSuperAdminUser(user) {
   if (!user) return false;
-  return Boolean(
-    user.isPlatformAdmin ||
-      (user.tenantId === DEFAULT_TENANT_ID &&
-        user.email &&
-        PLATFORM_ADMIN_EMAILS.has(String(user.email).toLowerCase()))
-  );
+  if (user.isPlatformAdmin !== undefined) {
+    return Boolean(user.isPlatformAdmin);
+  }
+  const email = String(user.email || "").trim().toLowerCase();
+  return Boolean(email && PLATFORM_ADMIN_EMAILS.has(email));
 }
 
 export const getAuthMiddleware = (allowedRoles = []) => {

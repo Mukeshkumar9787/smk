@@ -210,7 +210,6 @@ const provisionTenant = async ({
         mobile: ownerMobile || null,
         role: "ADMIN",
         tenantRole: TENANT_ROLES.STORE_OWNER,
-        isPlatformAdmin: false,
       },
     });
 

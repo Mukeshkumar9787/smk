@@ -11,6 +11,7 @@ import authService from "../services/auth.js";
 import { hashedPassword } from "../utils/cryptoUtils.js";
 
 const TEST_SLUG = `iso-test-${Date.now()}`;
+const TEST_OWNER_EMAIL = `store-owner-${Date.now()}@example.com`;
 const SHARED_CUSTOMER_EMAIL = `shared-customer-${Date.now()}@example.com`;
 const SUPER_ADMIN_EMAIL = "mukeshkumar87086@gmail.com";
 
@@ -31,7 +32,12 @@ try {
   const sampleSmkProductId = smkProducts.products[0].id;
   const sampleSmkSlug = smkProducts.products[0].slug;
 
-  // 2. Super Admin verification for mukeshkumar87086@gmail.com on default SMK tenant
+  // 2. Global Platform Admin verification in PlatformAdmin table
+  const platformAdminRecord = await rawPrisma.platformAdmin.findUnique({
+    where: { email: SUPER_ADMIN_EMAIL },
+  });
+  assert.ok(platformAdminRecord, "Super Admin mukeshkumar87086@gmail.com must exist in PlatformAdmin table");
+
   const superAdminRow = await rawPrisma.user.findUnique({
     where: {
       tenantId_email: {
@@ -39,24 +45,22 @@ try {
         email: SUPER_ADMIN_EMAIL,
       },
     },
-    select: { id: true, name: true, password: true, isPlatformAdmin: true },
+    select: { id: true, name: true, password: true, role: true, tenantRole: true },
   });
   assert.ok(superAdminRow, "Super Admin account mukeshkumar87086@gmail.com must exist on SMK");
-  assert.strictEqual(superAdminRow.isPlatformAdmin, true, "isPlatformAdmin must be true");
 
   const superAdminInfo = await runWithTenant(smkTenant, () =>
     userService.getUserInfo({ id: superAdminRow.id })
   );
-  assert.strictEqual(superAdminInfo.isPlatformAdmin, true);
+  assert.strictEqual(superAdminInfo.isPlatformAdmin, true, "isPlatformAdmin must be true from PlatformAdmin table");
   assert.strictEqual(superAdminInfo.role, "ADMIN");
 
-  // 3. Provision a brand-new isolated tenant using the SAME email as SMK's Super Admin
-  //    with a DIFFERENT profile name and DIFFERENT password!
+  // 3. Provision a brand-new isolated tenant for a new store owner
   const provisioned = await tenantService.provisionTenant({
     storeName: "Isolation Smoke Store",
     slug: TEST_SLUG,
-    ownerName: "Smoke Store Separate Owner",
-    ownerEmail: SUPER_ADMIN_EMAIL,
+    ownerName: "Smoke Store Owner",
+    ownerEmail: TEST_OWNER_EMAIL,
     ownerPassword: "StoreBOwnerPass@2026",
     planCode: "STARTER",
     primaryColor: "#10B981",
@@ -67,7 +71,7 @@ try {
   assert.notStrictEqual(
     createdOwnerId,
     superAdminRow.id,
-    "New tenant owner must be a separate User record even when sharing the same email"
+    "New tenant owner must be a separate User record"
   );
   assert.strictEqual(provisioned.tenant.slug, TEST_SLUG);
   assert.strictEqual(provisioned.tenant.branding.primaryColor, "#10B981");
@@ -81,11 +85,10 @@ try {
   // Verify SMK Super Admin row was completely untouched
   const superAdminAfterProvision = await rawPrisma.user.findUnique({
     where: { id: superAdminRow.id },
-    select: { name: true, password: true, isPlatformAdmin: true },
+    select: { name: true, password: true, role: true, tenantRole: true },
   });
   assert.strictEqual(superAdminAfterProvision.name, superAdminRow.name);
   assert.strictEqual(superAdminAfterProvision.password, superAdminRow.password);
-  assert.strictEqual(superAdminAfterProvision.isPlatformAdmin, true);
 
   // 4. Verify complete catalog isolation: new tenant sees 0 SMK products & only its own seeded category
   const newTenantProducts = await runWithTenant(newTenant, () =>

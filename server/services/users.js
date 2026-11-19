@@ -11,6 +11,21 @@ const PLATFORM_ADMIN_EMAILS = new Set(
     .filter(Boolean)
 );
 
+export const checkIsPlatformAdmin = async (email) => {
+  if (!email) return false;
+  const cleanEmail = String(email).trim().toLowerCase();
+  if (PLATFORM_ADMIN_EMAILS.has(cleanEmail)) return true;
+  try {
+    const admin = await rawPrisma.platformAdmin.findUnique({
+      where: { email: cleanEmail },
+      select: { id: true },
+    });
+    return Boolean(admin);
+  } catch {
+    return false;
+  }
+};
+
 const getUserInfo = async ({ id }) => {
   const tenantId = getCurrentTenantId();
   const user = await rawPrisma.user.findUnique({
@@ -24,7 +39,6 @@ const getUserInfo = async ({ id }) => {
       mobile: true,
       role: true,
       tenantRole: true,
-      isPlatformAdmin: true,
       tenant: {
         select: {
           id: true,
@@ -60,12 +74,7 @@ const getUserInfo = async ({ id }) => {
     },
   });
 
-  const isPlatformAdmin = Boolean(
-    user.isPlatformAdmin ||
-      (user.tenantId === DEFAULT_TENANT_ID &&
-        user.email &&
-        PLATFORM_ADMIN_EMAILS.has(String(user.email).toLowerCase()))
-  );
+  const isPlatformAdmin = await checkIsPlatformAdmin(user.email);
   const isTenantAdmin =
     isPlatformAdmin ||
     user.tenantRole === TENANT_ROLES.STORE_OWNER ||
@@ -169,7 +178,7 @@ const getAll = async ({ skip = 0, take = 10, search, role }) => {
       : {}),
   };
 
-  const [rows, totalCount] = await Promise.all([
+  const [rows, totalCount, platformAdmins] = await Promise.all([
     prisma.user.findMany({
       where,
       select: {
@@ -180,7 +189,6 @@ const getAll = async ({ skip = 0, take = 10, search, role }) => {
         status: true,
         role: true,
         tenantRole: true,
-        isPlatformAdmin: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -189,17 +197,34 @@ const getAll = async ({ skip = 0, take = 10, search, role }) => {
       take,
     }),
     prisma.user.count({ where }),
+    rawPrisma.platformAdmin.findMany({
+      select: { email: true },
+    }),
   ]);
 
-  const users = rows.map((u) => ({
-    ...u,
-    role:
+  const platformAdminEmails = new Set(
+    platformAdmins.map((p) => String(p.email).toLowerCase())
+  );
+  for (const envEmail of PLATFORM_ADMIN_EMAILS) {
+    platformAdminEmails.add(envEmail);
+  }
+
+  const users = rows.map((u) => {
+    const isPlatformAdmin = platformAdminEmails.has(
+      String(u.email || "").toLowerCase()
+    );
+    const isTenantAdmin =
+      isPlatformAdmin ||
       u.tenantRole === TENANT_ROLES.STORE_OWNER ||
       u.tenantRole === TENANT_ROLES.STORE_STAFF ||
-      u.role === ROLE_TYPES.ADMIN
-        ? ROLE_TYPES.ADMIN
-        : ROLE_TYPES.USER,
-  }));
+      u.role === ROLE_TYPES.ADMIN;
+
+    return {
+      ...u,
+      isPlatformAdmin,
+      role: isTenantAdmin ? ROLE_TYPES.ADMIN : ROLE_TYPES.USER,
+    };
+  });
 
   return { users, totalCount };
 };
