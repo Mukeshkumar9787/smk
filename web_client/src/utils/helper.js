@@ -7,6 +7,8 @@ import { ROLE_TYPES } from "./constants";
 const clearExpiredSession = () => {
   localStorage.removeItem(getTenantStorageKey("token"));
   localStorage.removeItem(getTenantStorageKey("cart"));
+  localStorage.removeItem("platform_token");
+  localStorage.removeItem("platform_admin");
 };
 
 const parseJwtPayload = (token) => {

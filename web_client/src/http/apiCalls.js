@@ -426,41 +426,60 @@ export async function getCurrentTenantSubscription() {
 }
 
 export async function getPlatformOverview() {
-  const res = await axiosInstance.get(API_TENANTS_PLATFORM_OVERVIEW);
+  const res = await axiosInstance.get(API_TENANTS_PLATFORM_OVERVIEW, {
+    skipAuthRedirect: true,
+    skipErrorToast: true,
+  });
   return res?.data || {};
 }
 
 export async function createPlatformStore(data) {
-  const res = await axiosInstance.post(API_TENANTS_PLATFORM_CREATE, data);
+  const res = await axiosInstance.post(API_TENANTS_PLATFORM_CREATE, data, {
+    skipAuthRedirect: true,
+  });
   return res?.data || {};
 }
 
 export async function updatePlatformStoreStatus(tenantId, status) {
-  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_STATUS(tenantId), { status });
+  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_STATUS(tenantId), { status }, {
+    skipAuthRedirect: true,
+  });
   return res?.data || {};
 }
 
 export async function updatePlatformStorePlan(tenantId, planCode) {
-  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_PLAN(tenantId), { planCode });
+  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_PLAN(tenantId), { planCode }, {
+    skipAuthRedirect: true,
+  });
   return res?.data || {};
 }
 
 export async function updatePlatformStoreChatbot(tenantId, aiChatbotEnabled) {
-  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_CHATBOT(tenantId), { aiChatbotEnabled });
+  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_CHATBOT(tenantId), { aiChatbotEnabled }, {
+    skipAuthRedirect: true,
+  });
   return res?.data || {};
 }
 
 export async function loginPlatformAdmin(data) {
-  const res = await axiosInstance.post(API_PLATFORM_LOGIN, data);
+  const res = await axiosInstance.post(API_PLATFORM_LOGIN, data, {
+    skipAuthRedirect: true,
+    skipErrorToast: true,
+  });
   return res?.data || {};
 }
 
 export async function getPlatformTenantUsers(tenantId) {
-  const res = await axiosInstance.get(API_TENANTS_PLATFORM_USERS(tenantId));
+  const res = await axiosInstance.get(API_TENANTS_PLATFORM_USERS(tenantId), {
+    skipAuthRedirect: true,
+    skipErrorToast: true,
+  });
   return res?.data || {};
 }
 
 export async function updatePlatformTenantUserPassword(tenantId, userId, newPassword) {
-  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_USER_PASSWORD(tenantId, userId), { newPassword });
+  const res = await axiosInstance.patch(API_TENANTS_PLATFORM_USER_PASSWORD(tenantId, userId), { newPassword }, {
+    skipAuthRedirect: true,
+  });
   return res?.data || {};
 }

@@ -196,8 +196,30 @@ axiosInstance.interceptors.response.use((response) => {
       return error.response;
     }
 
+    const isPlatformLocation = typeof window !== 'undefined' && (
+      window.location.pathname.startsWith('/platform-admin') ||
+      stripTenantPrefix(window.location.pathname).startsWith('/platform-admin')
+    );
+    const isPlatformApi = Boolean(
+      config?.url?.includes('/platform') ||
+      config?.url?.includes('/auth/platform')
+    );
+    const isAuthRoute = typeof window !== 'undefined' && (
+      stripTenantPrefix(window.location.pathname) === '/signin' ||
+      stripTenantPrefix(window.location.pathname) === '/signup' ||
+      stripTenantPrefix(window.location.pathname) === '/signin-otp' ||
+      stripTenantPrefix(window.location.pathname) === '/reset-password'
+    );
+
+    const shouldSkipRedirect = Boolean(
+      config?.skipAuthRedirect ||
+      isPlatformLocation ||
+      isPlatformApi ||
+      isAuthRoute
+    );
+
     if (error.response && error.response.status === 401) {
-      if (typeof window !== 'undefined' && stripTenantPrefix(window.location.pathname) !== '/signin') {
+      if (typeof window !== 'undefined' && !shouldSkipRedirect) {
         redirectToSignIn();
       }
     } else {
