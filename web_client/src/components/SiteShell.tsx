@@ -220,7 +220,30 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isPlatformLoginPage = pathname === "/platform-admin/login" || pathname?.startsWith("/platform-admin/login");
+  const isPlatformAdminRoute =
+    pathname === "/platform-admin" ||
+    pathname?.startsWith("/platform-admin/") ||
+    pathname === "/launch" ||
+    pathname?.startsWith("/launch/");
+
+  if (isPlatformAdminRoute) {
+    return (
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: "#3C50E0",
+            borderRadius: 12,
+          },
+        }}
+      >
+        {showLoader && <LoaderOverlay message={"Loading..."} />}
+        <main className="min-h-screen bg-slate-100 text-slate-900">
+          {children}
+        </main>
+        <ButtonLoaderManager />
+      </ConfigProvider>
+    );
+  }
 
   return (
     <ConfigProvider
@@ -242,8 +265,8 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
                 <PreviewSliderProvider>
                   <ServerOfflineBanner />
                   <RateLimitBanner />
-                  {!isPlatformLoginPage && <Header />}
-                  <main className={`relative ${isPlatformLoginPage ? 'min-h-screen bg-slate-950' : 'min-h-[70vh] bg-transparent'}`}>
+                  <Header />
+                  <main className="relative min-h-[70vh] bg-transparent">
                     <Suspense fallback={null}>
                       <AdminDesktopShell>{children}</AdminDesktopShell>
                     </Suspense>
@@ -260,8 +283,8 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
         </ReduxProvider>
       </GoogleOAuthProvider>
       <ScrollToTop />
-      {!isPlatformLoginPage && <Footer />}
-      {!isPlatformLoginPage && <ChatbotAssistant />}
+      <Footer />
+      <ChatbotAssistant />
       <ButtonLoaderManager />
     </ConfigProvider>
   );

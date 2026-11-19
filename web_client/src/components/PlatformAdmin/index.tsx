@@ -13,6 +13,7 @@ import { getCurrencyDetails } from "@/utils/helper";
 
 export default function PlatformAdmin() {
   const [data, setData] = useState<any>(null);
+  const [adminUser, setAdminUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -26,6 +27,13 @@ export default function PlatformAdmin() {
     aiChatbotEnabled: true,
     primaryColor: "#3C50E0",
   });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("platform_admin");
+      if (stored) setAdminUser(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   const loadOverview = useCallback(async () => {
     try {
@@ -162,6 +170,12 @@ export default function PlatformAdmin() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {adminUser?.email && (
+              <div className="hidden sm:flex flex-col text-right pr-2 border-r border-slate-200">
+                <span className="text-xs font-bold text-dark">{adminUser.email}</span>
+                <span className="text-[10px] font-semibold text-blue uppercase tracking-wider">SUPER ADMIN</span>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -170,13 +184,13 @@ export default function PlatformAdmin() {
                 localStorage.removeItem("platform_admin");
                 window.location.href = "/platform-admin/login";
               }}
-              className="inline-flex min-h-[44px] items-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              className="inline-flex min-h-[42px] items-center rounded-2xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
             >
               Sign Out
             </button>
             <Link
               href="/launch"
-              className="inline-flex min-h-[44px] items-center rounded-2xl bg-blue px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-dark cursor-pointer"
+              className="inline-flex min-h-[42px] items-center rounded-2xl bg-blue px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-dark cursor-pointer"
             >
               + Provision New Store &rarr;
             </Link>
