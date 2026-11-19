@@ -227,6 +227,7 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/launch/");
 
   if (isPlatformAdminRoute) {
+    const isLogin = pathname === "/platform-admin/login";
     return (
       <ConfigProvider
         theme={{
@@ -237,7 +238,11 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
         }}
       >
         {showLoader && <LoaderOverlay message={"Loading..."} />}
-        <main className="min-h-screen bg-slate-100 text-slate-900">
+        <main
+          className={`min-h-screen ${
+            isLogin ? "bg-slate-950 text-slate-100" : "bg-slate-100 text-slate-900"
+          } -mb-[calc(6rem+env(safe-area-inset-bottom))] xl:mb-0`}
+        >
           {children}
         </main>
         <ButtonLoaderManager />

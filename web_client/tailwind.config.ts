@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const defaultTheme = require("tailwindcss/defaultTheme");
+const defaultColors = require("tailwindcss/colors");
 
 const config: Config = {
   content: [
@@ -23,6 +24,7 @@ const config: Config = {
       },
     },
     colors: {
+      ...defaultColors,
       current: "currentColor",
       transparent: "transparent",
       white: "#FFFFFF",
