@@ -104,7 +104,6 @@ const Signin = () => {
                     name="email"
                     id="email"
                     required
-                    placeholder="Enter your email"
                     className="form-input"
                   />
                 </div>
@@ -118,7 +117,6 @@ const Signin = () => {
                     type="password"
                     name="password"
                     id="password"
-                    placeholder="Enter your password"
                     autoComplete="on"
                     minLength={8}
                     required

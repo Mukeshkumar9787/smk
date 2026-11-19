@@ -60,44 +60,50 @@ export default function PlatformAdminLogin() {
     <div
       className="flex min-h-screen flex-col items-center justify-center px-4 py-10"
       style={{
-        background: "radial-gradient(ellipse at 50% 0%, #1e1b4b 0%, #0f172a 50%, #020617 100%)",
-        color: "#f8fafc",
+        background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #eef2ff 100%)",
+        color: "#0f172a",
       }}
     >
       {/* Return to Storefront link */}
       <div className="mb-6 w-full max-w-md flex items-center justify-between px-1">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 transition hover:text-white"
+          className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 transition hover:text-slate-900"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
           </svg>
           Return to Storefront
         </Link>
-        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+          style={{
+            backgroundColor: "#ecfdf5",
+            border: "1px solid #a7f3d0",
+            color: "#047857",
+          }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
           System Online
         </span>
       </div>
 
       <div
-        className="w-full max-w-md overflow-hidden rounded-3xl p-8 shadow-2xl sm:p-10"
+        className="w-full max-w-md overflow-hidden rounded-3xl p-8 sm:p-10"
         style={{
-          backgroundColor: "rgba(15, 23, 42, 0.92)",
-          border: "1px solid rgba(51, 65, 85, 0.6)",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)",
-          backdropFilter: "blur(20px)",
+          backgroundColor: "#ffffff",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 20px 40px -15px rgba(15, 23, 42, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.05)",
         }}
       >
         {/* Header Icon & Title */}
         <div className="text-center">
           <div
-            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-inner"
+            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm"
             style={{
-              backgroundColor: "rgba(79, 70, 229, 0.15)",
-              border: "1px solid rgba(99, 102, 241, 0.3)",
-              color: "#818cf8",
+              backgroundColor: "#eef2ff",
+              border: "1px solid #e0e7ff",
+              color: "#4f46e5",
             }}
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,20 +114,20 @@ export default function PlatformAdminLogin() {
           <span
             className="inline-block rounded-full px-3 py-1 text-[11px] font-semibold tracking-wider uppercase"
             style={{
-              backgroundColor: "rgba(99, 102, 241, 0.12)",
-              color: "#a5b4fc",
-              border: "1px solid rgba(99, 102, 241, 0.25)",
+              backgroundColor: "#eef2ff",
+              color: "#4338ca",
+              border: "1px solid #c7d2fe",
             }}
           >
             Platform Super Admin
           </span>
           <h1
             className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl"
-            style={{ color: "#ffffff", letterSpacing: "-0.02em" }}
+            style={{ color: "#0f172a", letterSpacing: "-0.02em" }}
           >
             SMK Control Plane
           </h1>
-          <p className="mt-2 text-xs leading-5" style={{ color: "#94a3b8" }}>
+          <p className="mt-2 text-xs leading-5" style={{ color: "#64748b" }}>
             Dedicated administrative access for multi-tenant stores, AI chatbot services, and system metrics.
           </p>
         </div>
@@ -131,9 +137,9 @@ export default function PlatformAdminLogin() {
           <div
             className="mt-6 flex items-start gap-3 rounded-2xl p-4 text-xs font-medium"
             style={{
-              backgroundColor: "rgba(136, 19, 55, 0.35)",
-              border: "1px solid rgba(244, 63, 94, 0.35)",
-              color: "#fecdd3",
+              backgroundColor: "#fff1f2",
+              border: "1px solid #fecdd3",
+              color: "#be123c",
             }}
           >
             <span className="text-base leading-none">⚠️</span>
@@ -144,35 +150,34 @@ export default function PlatformAdminLogin() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div>
-            <label className="block text-xs font-medium" style={{ color: "#cbd5e1" }}>
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: "#334155" }}>
               Administrator Email
             </label>
             <input
               type="email"
               required
               autoFocus
-              placeholder="mukeshkumar87086@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1.5 w-full rounded-xl px-4 py-3 text-sm transition focus:outline-none"
               style={{
-                backgroundColor: "rgba(2, 6, 23, 0.75)",
-                border: "1px solid #334155",
-                color: "#ffffff",
+                backgroundColor: "#f8fafc",
+                border: "1px solid #cbd5e1",
+                color: "#0f172a",
               }}
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-medium" style={{ color: "#cbd5e1" }}>
+              <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: "#334155" }}>
                 Master Password
               </label>
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-xs transition hover:underline"
-                style={{ color: "#818cf8" }}
+                className="text-xs font-medium transition hover:underline"
+                style={{ color: "#4f46e5" }}
               >
                 {showPassword ? "Hide password" : "Show password"}
               </button>
@@ -180,14 +185,13 @@ export default function PlatformAdminLogin() {
             <input
               type={showPassword ? "text" : "password"}
               required
-              placeholder="••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1.5 w-full rounded-xl px-4 py-3 text-sm transition focus:outline-none"
               style={{
-                backgroundColor: "rgba(2, 6, 23, 0.75)",
-                border: "1px solid #334155",
-                color: "#ffffff",
+                backgroundColor: "#f8fafc",
+                border: "1px solid #cbd5e1",
+                color: "#0f172a",
               }}
             />
           </div>
@@ -199,7 +203,7 @@ export default function PlatformAdminLogin() {
             style={{
               background: "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
               color: "#ffffff",
-              boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)",
+              boxShadow: "0 10px 20px -5px rgba(79, 70, 229, 0.35)",
             }}
           >
             {loading ? "Authenticating..." : "Sign In to Platform Admin"}
@@ -208,7 +212,7 @@ export default function PlatformAdminLogin() {
 
         <div
           className="mt-8 border-t pt-6 text-center text-[11px]"
-          style={{ borderColor: "rgba(51, 65, 85, 0.5)", color: "#64748b" }}
+          style={{ borderColor: "#f1f5f9", color: "#94a3b8" }}
         >
           Protected environment. Authentication requests are monitored and encrypted.
         </div>

@@ -75,7 +75,6 @@ const SigninOtp = () => {
                     name="email"
                     id="email"
                     required
-                    placeholder="Enter your email address"
                     className="form-input"
                   />
                 </div>

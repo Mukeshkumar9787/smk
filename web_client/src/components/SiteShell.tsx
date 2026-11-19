@@ -240,7 +240,7 @@ function SiteShellInner({ children }: { children: React.ReactNode }) {
         {showLoader && <LoaderOverlay message={"Loading..."} />}
         <main
           className={`min-h-screen ${
-            isLogin ? "bg-slate-950 text-slate-100" : "bg-slate-100 text-slate-900"
+            isLogin ? "bg-slate-50 text-slate-900" : "bg-slate-100 text-slate-900"
           } -mb-[calc(6rem+env(safe-area-inset-bottom))] xl:mb-0`}
         >
           {children}

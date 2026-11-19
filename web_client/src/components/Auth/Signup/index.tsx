@@ -130,7 +130,6 @@ const Signup = () => {
                     name="email"
                     id="email"
                     required
-                    placeholder="Enter your email address"
                     className="form-input"
                   />
                 </div>
@@ -160,7 +159,6 @@ const Signup = () => {
                     name="password"
                     id="password"
                     required
-                    placeholder="Enter your password"
                     autoComplete="on"
                     minLength={PASSWORD_MIN_LENGTH}
                     title="At least 6 characters, one uppercase letter, and one number"
@@ -178,7 +176,6 @@ const Signup = () => {
                     name="confirmPassword"
                     id="re-type-password"
                     required
-                    placeholder="Re-type your password"
                     autoComplete="on"
                     minLength={PASSWORD_MIN_LENGTH}
                     className="form-input"

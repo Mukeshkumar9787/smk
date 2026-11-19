@@ -92,7 +92,6 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
                     defaultValue={email}
                     readOnly={nestedForm}
                     required
-                    placeholder="Enter your email address"
                     className="form-input"
                   />
                 </div>
@@ -106,7 +105,6 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
                     name="password"
                     id="password"
                     required
-                    placeholder="Enter new password"
                     defaultValue={''}
                     autoComplete="on"
                     minLength={PASSWORD_MIN_LENGTH}
@@ -126,7 +124,6 @@ const ResetPassword = ({ email = '', nestedForm=false }) => {
                     id="re-type-password"
                     required
                     defaultValue={''}
-                    placeholder="Re-type new password"
                     autoComplete="on"
                     minLength={PASSWORD_MIN_LENGTH}
                     className="form-input"
