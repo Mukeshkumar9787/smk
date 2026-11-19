@@ -46,5 +46,10 @@ router.patch(
   requirePlatformAdmin,
   tenantController.updateTenantStatus
 );
+router.patch(
+  "/platform/:tenantId/plan",
+  requirePlatformAdmin,
+  tenantController.updateTenantPlan
+);
 
 export default router;

@@ -25,6 +25,7 @@ const BrandingPage = () => {
     textPrimaryColor: branding.textPrimaryColor || "#1C274C",
     seoTitle: branding.seoTitle || "",
     seoDescription: branding.seoDescription || "",
+    aiChatbotActive: branding.aiChatbotActive !== false,
   });
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -51,6 +52,7 @@ const BrandingPage = () => {
             textPrimaryColor: b.textPrimaryColor || "#1C274C",
             seoTitle: b.seoTitle || "",
             seoDescription: b.seoDescription || "",
+            aiChatbotActive: b.aiChatbotActive !== false,
           });
         }
         if (subRes?.success && subRes?.data) {
@@ -63,7 +65,7 @@ const BrandingPage = () => {
     loadData();
   }, [setTenant]);
 
-  const applyField = (key: string, value: string) => {
+  const applyField = (key: string, value: any) => {
     setForm((prev) => {
       const next = {
         ...prev,
@@ -134,6 +136,14 @@ const BrandingPage = () => {
         : `${window.location.origin}/s/${tenant.slug}`
       : `/s/${tenant.slug}`;
 
+  const currentPlan = subscriptionInfo?.plan || tenant.plan;
+  const isPlanChatbotAllowed = Boolean(tenant.isDefault || currentPlan?.aiChatbotEnabled);
+  const customDomainAllowed = Boolean(tenant.isDefault || currentPlan?.customDomainAllowed);
+  const autoProcurementEnabled = Boolean(tenant.isDefault || currentPlan?.autoProcurementEnabled);
+  const maxProducts = currentPlan?.maxProducts || 50;
+  const productsCount = subscriptionInfo?.usage?.products ?? "0";
+  const planName = currentPlan?.name || "Starter";
+
   return (
     <SectionPageLayout
       eyebrow="Store Appearance"
@@ -142,14 +152,22 @@ const BrandingPage = () => {
       stats={[
         { label: "Store Slug", value: tenant.slug },
         {
-          label: "Plan",
-          value: subscriptionInfo?.plan?.name || tenant.plan?.name || "Starter",
+          label: "Current Plan",
+          value: planName,
         },
         {
-          label: "Products Used",
+          label: "Catalog Capacity",
           value: subscriptionInfo?.usage
-            ? `${subscriptionInfo.usage.products} / ${subscriptionInfo.usage.maxProducts}`
+            ? `${subscriptionInfo.usage.products} / ${maxProducts}`
             : "—",
+        },
+        {
+          label: "AI Chatbot",
+          value: !isPlanChatbotAllowed
+            ? "🔒 Pro AI Only"
+            : form.aiChatbotActive
+            ? "✔ Active"
+            : "⏸️ Disabled",
         },
       ]}
       onSubmit={handleSubmit}
@@ -171,6 +189,125 @@ const BrandingPage = () => {
           >
             View Storefront →
           </a>
+        </div>
+
+        {/* Tenant Plan & Autonomous AI Feature Controls */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue/10 px-3 py-1 text-xs font-semibold text-blue mb-2">
+                📦 {planName} Plan
+              </span>
+              <h3 className="text-lg font-semibold text-dark">
+                Plan Accessibility & AI Assistant
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Manage AI customer assistance and view features enabled for your store subscription.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-right">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Catalog Usage</p>
+                <p className="text-sm font-semibold text-dark">
+                  {productsCount} / {maxProducts} products
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Chatbot Feature Toggle */}
+          <div className={`rounded-2xl border p-5 transition ${
+            isPlanChatbotAllowed
+              ? form.aiChatbotActive
+                ? "border-emerald-200 bg-emerald-50/40"
+                : "border-slate-200 bg-slate-50/50"
+              : "border-slate-200 bg-slate-50/70 opacity-90"
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl ${
+                  isPlanChatbotAllowed
+                    ? form.aiChatbotActive
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-200 text-slate-600"
+                    : "bg-amber-100 text-amber-700"
+                }`}>
+                  {isPlanChatbotAllowed ? "🤖" : "🔒"}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-dark">
+                      AI Shopping Assistant (Chatbot Widget)
+                    </h4>
+                    {isPlanChatbotAllowed ? (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        form.aiChatbotActive
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-200 text-slate-700"
+                      }`}>
+                        {form.aiChatbotActive ? "Active on Storefront" : "Disabled"}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                        Pro AI Feature Only
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-slate-600 max-w-xl">
+                    {isPlanChatbotAllowed
+                      ? "When enabled, an intelligent floating shopping assistant is embedded on your storefront to assist customers, answer catalog inquiries, and explain shipping & returns."
+                      : "Autonomous AI customer support is exclusive to the Pro AI plan. Contact platform administrator to upgrade your plan and unlock AI conversational commerce."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Toggle Switch */}
+              <div className="sm:self-center shrink-0">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={Boolean(isPlanChatbotAllowed && form.aiChatbotActive)}
+                    disabled={!isPlanChatbotAllowed}
+                    onChange={(e) => {
+                      if (!isPlanChatbotAllowed) {
+                        notifyError("AI Chatbot requires the Pro AI plan. Upgrade your plan to enable this feature.");
+                        return;
+                      }
+                      const next = e.target.checked;
+                      setForm((prev) => ({ ...prev, aiChatbotActive: next }));
+                      updateBrandingLocally({ aiChatbotActive: next });
+                    }}
+                  />
+                  <div className={`w-12 h-6.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[3px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${
+                    isPlanChatbotAllowed ? "peer-checked:bg-emerald-600" : "opacity-50 cursor-not-allowed"
+                  }`}></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature Badges Matrix */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Custom Domain</p>
+              <p className="mt-1 text-xs font-semibold text-dark flex items-center gap-1.5">
+                {customDomainAllowed ? "✔ Included on Plan" : "🔒 Requires Growth / Pro"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Autonomous Restock</p>
+              <p className="mt-1 text-xs font-semibold text-dark flex items-center gap-1.5">
+                {autoProcurementEnabled ? "✔ Active (Pro AI)" : "🔒 Requires Pro AI"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Max Media Storage</p>
+              <p className="mt-1 text-xs font-semibold text-dark flex items-center gap-1.5">
+                💾 {(currentPlan?.maxStorageMb || 500) >= 1000 ? `${(currentPlan?.maxStorageMb || 500) / 1000} GB` : `${currentPlan?.maxStorageMb || 500} MB`}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Store Identity + Logo */}

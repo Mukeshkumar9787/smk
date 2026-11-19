@@ -4,13 +4,20 @@ import Script from "next/script";
 import { useTenant } from "@/app/context/TenantContext";
 
 /**
- * Embeds the SMK Customer Support RAG Assistant on the main SMK store only
- * so isolated tenant storefronts remain fully white-labeled.
+ * Embeds the Customer Support RAG Assistant according to:
+ * 1. Tenant Plan accessibility (aiChatbotEnabled on plan or primary default store)
+ * 2. Store Owner's Feature Toggle (aiChatbotActive !== false)
  */
 export default function ChatbotAssistant() {
-  const { tenant } = useTenant();
+  const { tenant, branding } = useTenant();
 
-  if (!tenant?.isDefault) {
+  // Plan accessibility check
+  const isPlanAllowed = Boolean(tenant?.isDefault || tenant?.plan?.aiChatbotEnabled);
+
+  // Store-level feature toggle
+  const isChatbotActive = branding?.aiChatbotActive !== false;
+
+  if (!isPlanAllowed || !isChatbotActive) {
     return null;
   }
 

@@ -118,6 +118,22 @@ const createPlatformTenant = async (req, res) => {
   }
 };
 
+const updateTenantPlan = async (req, res) => {
+  try {
+    const data = await tenantService.updateTenantPlan({
+      tenantId: req.params.tenantId,
+      planCode: req.body?.planCode,
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Store plan updated successfully",
+      data,
+    });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
 export default {
   resolveCurrentTenant,
   listPlans,
@@ -129,4 +145,5 @@ export default {
   getPlatformOverview,
   updateTenantStatus,
   createPlatformTenant,
+  updateTenantPlan,
 };

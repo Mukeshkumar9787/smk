@@ -49,3 +49,4 @@ export const API_TENANTS_CURRENT_SUBSCRIPTION = `${API_TENANTS}/current/subscrip
 export const API_TENANTS_PLATFORM_OVERVIEW = `${API_TENANTS}/platform/overview`;
 export const API_TENANTS_PLATFORM_CREATE = `${API_TENANTS}/platform/create`;
 export const API_TENANTS_PLATFORM_STATUS = (tenantId) => `${API_TENANTS}/platform/${tenantId}/status`;
+export const API_TENANTS_PLATFORM_PLAN = (tenantId) => `${API_TENANTS}/platform/${tenantId}/plan`;

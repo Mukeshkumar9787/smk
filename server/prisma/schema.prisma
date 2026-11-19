@@ -135,6 +135,7 @@ model TenantBranding {
   textPrimaryColor String   @default("#1C274C")
   seoTitle         String?
   seoDescription   String?
+  aiChatbotActive  Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

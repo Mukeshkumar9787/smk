@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   createPlatformStore,
   getPlatformOverview,
+  updatePlatformStorePlan,
   updatePlatformStoreStatus,
 } from "@/http/apiCalls";
 import { notifyError, notifySuccess } from "@/utils/notify";
@@ -58,6 +59,20 @@ export default function PlatformAdmin() {
       await loadOverview();
     } catch {
       notifyError("Failed to update store status");
+    }
+  };
+
+  const handlePlanChange = async (tenant: any, newPlanCode: string) => {
+    try {
+      const res = await updatePlatformStorePlan(tenant.id, newPlanCode);
+      if (!res?.success) {
+        notifyError(res?.message || "Failed to update store plan");
+        return;
+      }
+      notifySuccess(`Store "${tenant.name}" plan changed to ${newPlanCode}.`);
+      await loadOverview();
+    } catch {
+      notifyError("Failed to update store plan");
     }
   };
 
@@ -271,9 +286,39 @@ export default function PlatformAdmin() {
                       <p>{t.owner?.email || "—"}</p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                        {t.planName}
-                      </span>
+                      {t.isDefault ? (
+                        <div>
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                            {t.planName}
+                          </span>
+                          <p className="mt-1 text-[11px] text-emerald-600 font-medium">
+                            🤖 Chatbot Active
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <select
+                            value={t.planCode}
+                            onChange={(e) => handlePlanChange(t, e.target.value)}
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 shadow-sm focus:border-blue focus:outline-none"
+                          >
+                            <option value="STARTER">Starter (50 prods)</option>
+                            <option value="GROWTH">Growth (500 prods)</option>
+                            <option value="PRO">Pro AI (5000 prods)</option>
+                          </select>
+                          <p className="mt-1 text-[11px]">
+                            {t.aiChatbotEnabled ? (
+                              t.aiChatbotActive ? (
+                                <span className="text-emerald-600 font-medium">🤖 Chatbot ON</span>
+                              ) : (
+                                <span className="text-slate-500 font-medium">⏸️ Chatbot OFF</span>
+                              )
+                            ) : (
+                              <span className="text-amber-600 font-medium">🔒 Chatbot Locked</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-600">
                       {t.counts?.products ?? 0} products · {t.counts?.orders ?? 0} orders

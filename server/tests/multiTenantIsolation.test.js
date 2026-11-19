@@ -221,6 +221,41 @@ try {
   assert.strictEqual(smkBrandingAfter.branding.primaryColor, "#3C50E0");
   assert.strictEqual(smkBrandingAfter.branding.storeName, "SMK");
 
+  // 9. Plan Accessibility and AI Chatbot Feature Toggle Tests
+  // New tenant was provisioned with STARTER plan (aiChatbotEnabled: false)
+  // Attempting to activate AI Chatbot on STARTER plan must fail with 403
+  await assert.rejects(
+    () =>
+      runWithTenant(newTenant, () =>
+        tenantService.updateCurrentBranding({ aiChatbotActive: true })
+      ),
+    (err) => err.statusCode === 403,
+    "Activating AI chatbot on STARTER plan must be rejected with 403"
+  );
+
+  // Platform Admin upgrades the tenant to PRO plan (aiChatbotEnabled: true)
+  const upgradedTenant = await tenantService.updateTenantPlan({
+    tenantId: createdTenantId,
+    planCode: "PRO",
+  });
+  assert.strictEqual(upgradedTenant.plan.code, "PRO");
+  assert.strictEqual(upgradedTenant.plan.aiChatbotEnabled, true);
+
+  // Now on PRO plan, store owner can freely toggle AI Chatbot ON and OFF
+  const chatbotTurnedOn = await runWithTenant(newTenant, () =>
+    tenantService.updateCurrentBranding({ aiChatbotActive: true })
+  );
+  assert.strictEqual(chatbotTurnedOn.branding.aiChatbotActive, true);
+
+  const chatbotTurnedOff = await runWithTenant(newTenant, () =>
+    tenantService.updateCurrentBranding({ aiChatbotActive: false })
+  );
+  assert.strictEqual(chatbotTurnedOff.branding.aiChatbotActive, false);
+
+  // Verify resolveTenant returns the updated chatbot toggle state
+  const resolvedNewTenant = await resolveTenant({ slug: TEST_SLUG });
+  assert.strictEqual(resolvedNewTenant.branding.aiChatbotActive, false);
+
   console.log("✅ ALL MULTI-TENANT & PER-TENANT USER ISOLATION TESTS PASSED!");
 } finally {
   if (smkCustomerId) {

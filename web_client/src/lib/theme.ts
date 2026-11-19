@@ -11,6 +11,7 @@ export interface TenantBranding {
   textPrimaryColor: string;
   seoTitle?: string;
   seoDescription?: string;
+  aiChatbotActive?: boolean;
 }
 
 export interface TenantPlanInfo {
@@ -66,6 +67,7 @@ export const DEFAULT_TENANT: PublicTenant = {
     seoTitle: "SMK | Online Shopping Store",
     seoDescription:
       "Shop curated collections, everyday essentials, and new arrivals at SMK with transparent pricing, real-time stock availability, and secure online checkout.",
+    aiChatbotActive: true,
   },
 };
 

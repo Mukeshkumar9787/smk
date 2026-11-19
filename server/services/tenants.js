@@ -101,6 +101,7 @@ export function formatPublicTenant(tenant) {
       seoDescription:
         branding.seoDescription ||
         `Shop curated products online at ${branding.storeName || tenant.name} with secure checkout.`,
+      aiChatbotActive: branding.aiChatbotActive !== false,
     },
   };
 }
@@ -228,6 +229,7 @@ const provisionTenant = async ({
         textPrimaryColor: "#1C274C",
         seoTitle: `${cleanStoreName} | Online Store`,
         seoDescription: `Shop products from ${cleanStoreName} online with transparent pricing and secure checkout.`,
+        aiChatbotActive: Boolean(plan?.aiChatbotEnabled),
       },
     });
 
@@ -332,13 +334,28 @@ const updateCurrentBranding = async (payload = {}) => {
   const tenantId = getCurrentTenantId();
   const current = await rawPrisma.tenant.findUnique({
     where: { id: tenantId },
-    include: { branding: true },
+    include: { branding: true, plan: true },
   });
 
   if (!current) {
     const err = new Error("Store not found");
     err.statusCode = 404;
     throw err;
+  }
+
+  // Tenant Plan-based Accessibility Guard: AI Chatbot Toggle
+  let aiChatbotActive = current.branding?.aiChatbotActive !== false;
+  if (payload.aiChatbotActive !== undefined) {
+    const requestedActive = Boolean(payload.aiChatbotActive);
+    const isPlanAllowed = Boolean(current.isDefault || current.plan?.aiChatbotEnabled);
+    if (requestedActive && !isPlanAllowed) {
+      const err = new Error(
+        `AI Chatbot is an exclusive feature of the Pro AI plan. Please upgrade from ${current.plan?.name || "your current plan"} to activate autonomous AI customer support.`
+      );
+      err.statusCode = 403;
+      throw err;
+    }
+    aiChatbotActive = requestedActive;
   }
 
   const pickHex = (value, fallback) =>
@@ -373,6 +390,7 @@ const updateCurrentBranding = async (payload = {}) => {
       payload.seoDescription !== undefined
         ? String(payload.seoDescription || "").trim()
         : current.branding?.seoDescription,
+    aiChatbotActive,
   };
 
   await rawPrisma.$transaction(async (tx) => {
@@ -398,6 +416,7 @@ const getCurrentSubscription = async () => {
       where: { id: tenantId },
       include: {
         plan: true,
+        branding: true,
         subscriptions: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -410,6 +429,9 @@ const getCurrentSubscription = async () => {
     rawPrisma.order.count({ where: { tenantId } }),
   ]);
 
+  const maxProducts = tenant?.plan?.maxProducts || 50;
+  const isProductLimitReached = maxProducts > 0 && productCount >= maxProducts;
+
   return {
     tenantId,
     slug: tenant?.slug,
@@ -418,9 +440,24 @@ const getCurrentSubscription = async () => {
     customDomainVerified: Boolean(tenant?.customDomainVerified),
     plan: tenant?.plan || null,
     subscription: tenant?.subscriptions?.[0] || null,
+    features: {
+      aiChatbot: {
+        allowed: Boolean(tenant?.isDefault || tenant?.plan?.aiChatbotEnabled),
+        active: tenant?.branding?.aiChatbotActive !== false,
+      },
+      customDomain: {
+        allowed: Boolean(tenant?.isDefault || tenant?.plan?.customDomainAllowed),
+        domain: tenant?.customDomain || null,
+        verified: Boolean(tenant?.customDomainVerified),
+      },
+      autoProcurement: {
+        allowed: Boolean(tenant?.isDefault || tenant?.plan?.autoProcurementEnabled),
+      },
+    },
     usage: {
       products: productCount,
-      maxProducts: tenant?.plan?.maxProducts || 50,
+      maxProducts,
+      isProductLimitReached,
       categories: categoryCount,
       orders: orderCount,
     },
@@ -481,6 +518,10 @@ const getPlatformOverview = async () => {
       customDomainVerified: t.customDomainVerified,
       planName: t.plan?.name || "Starter",
       planCode: t.plan?.code || "STARTER",
+      maxProducts: t.plan?.maxProducts || 50,
+      customDomainAllowed: Boolean(t.plan?.customDomainAllowed),
+      aiChatbotEnabled: Boolean(t.plan?.aiChatbotEnabled),
+      aiChatbotActive: t.branding?.aiChatbotActive !== false,
       primaryColor: t.branding?.primaryColor || "#3C50E0",
       logoUrl: t.branding?.logoUrl || null,
       owner: t.users?.[0] || null,
@@ -488,6 +529,33 @@ const getPlatformOverview = async () => {
       createdAt: t.createdAt,
     })),
   };
+};
+
+const updateTenantPlan = async ({ tenantId, planCode }) => {
+  const targetPlan = await rawPrisma.plan.findUnique({
+    where: { code: String(planCode).toUpperCase() },
+  });
+  if (!targetPlan) {
+    const err = new Error(`Plan ${planCode} not found`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const updated = await rawPrisma.tenant.update({
+    where: { id: tenantId },
+    data: { planId: targetPlan.id },
+    include: { plan: true, branding: true },
+  });
+
+  if (!targetPlan.aiChatbotEnabled && !updated.isDefault && updated.branding?.aiChatbotActive) {
+    await rawPrisma.tenantBranding.update({
+      where: { tenantId },
+      data: { aiChatbotActive: false },
+    });
+  }
+
+  clearTenantCache();
+  return formatPublicTenant(updated);
 };
 
 const updateTenantStatus = async ({ tenantId, status }) => {
@@ -529,4 +597,5 @@ export default {
   getCurrentSubscription,
   getPlatformOverview,
   updateTenantStatus,
+  updateTenantPlan,
 };
