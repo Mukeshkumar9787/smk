@@ -35,11 +35,22 @@ export default function ChatbotAssistant() {
     ? embedUrl
     : `${embedUrl.replace(/\/+$/, "")}/embed.js`;
 
+  const queryParams = new URLSearchParams();
+  if (tenant?.slug) queryParams.set("tenant", tenant.slug);
+  if (tenant?.id) queryParams.set("tenantId", tenant.id);
+  const storeDisplayName = branding?.storeName || tenant?.name || "";
+  if (storeDisplayName) queryParams.set("storeName", storeDisplayName);
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+  const finalScriptSrc = `${scriptSrc}${queryString}`;
+
   return (
     <Script
-      src={scriptSrc}
+      src={finalScriptSrc}
       strategy="lazyOnload"
       id="smk-chatbot-embed-script"
+      data-tenant-id={tenant?.id || ""}
+      data-tenant-slug={tenant?.slug || ""}
+      data-store-name={storeDisplayName}
     />
   );
 }
