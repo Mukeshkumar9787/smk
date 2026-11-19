@@ -5,16 +5,15 @@ import { ORDER_STATUS } from "./constants";
 import { ROLE_TYPES } from "./constants";
 
 const clearExpiredSession = () => {
-  const tenantSlug = getClientTenantSlug();
-  if (tenantSlug) {
-    localStorage.removeItem(getTenantStorageKey("token"));
-    localStorage.removeItem(getTenantStorageKey("loginToProceed"));
-  } else {
+  const tenantSlug = getClientTenantSlug() || "smk";
+  localStorage.removeItem(getTenantStorageKey("token", tenantSlug));
+  localStorage.removeItem(getTenantStorageKey("loginToProceed", tenantSlug));
+  localStorage.removeItem(getTenantStorageKey("next", tenantSlug));
+  if (tenantSlug === "smk" || tenantSlug === "default") {
     localStorage.removeItem("token");
     localStorage.removeItem("loginToProceed");
+    localStorage.removeItem("next");
   }
-  localStorage.removeItem("platform_token");
-  localStorage.removeItem("platform_admin");
 };
 
 const parseJwtPayload = (token) => {
@@ -47,15 +46,31 @@ export const getStoredToken = () => {
   if (typeof window === "undefined") return null;
 
   const isPlatformAdminRoute = window.location?.pathname?.startsWith("/platform-admin");
-  const tenantSlug = getClientTenantSlug();
-
-  let token = null;
   if (isPlatformAdminRoute) {
-    token = localStorage.getItem("platform_token");
-  } else if (tenantSlug) {
-    token = localStorage.getItem(getTenantStorageKey("token"));
-  } else {
-    token = localStorage.getItem("token") || localStorage.getItem(getTenantStorageKey("token"));
+    const token = localStorage.getItem("platform_token");
+    if (!token || isTokenExpired(token)) return null;
+    return token;
+  }
+
+  const tenantSlug = getClientTenantSlug() || "smk";
+  const storageKey = getTenantStorageKey("token", tenantSlug);
+  let token = localStorage.getItem(storageKey);
+
+  // Backward-compatible fallback for default store (smk) if legacy "token" exists
+  if (!token && (tenantSlug === "smk" || tenantSlug === "default")) {
+    const legacyToken = localStorage.getItem("token");
+    if (legacyToken) {
+      const payload = parseJwtPayload(legacyToken);
+      if (
+        payload &&
+        !payload.isPlatformAdmin &&
+        (!payload.tenantId || payload.tenantId === "tenant_smk_default" || payload.tenantId === "smk")
+      ) {
+        token = legacyToken;
+        localStorage.setItem(storageKey, legacyToken);
+        localStorage.removeItem("token");
+      }
+    }
   }
 
   if (!token) return null;
@@ -63,6 +78,30 @@ export const getStoredToken = () => {
   if (isTokenExpired(token)) {
     clearExpiredSession();
     return null;
+  }
+
+  // Multi-tenant JWT payload verification: ensure token strictly belongs to the active tenant
+  const payload = parseJwtPayload(token);
+  if (payload) {
+    if (payload.isPlatformAdmin) {
+      return null;
+    }
+
+    if (tenantSlug === "smk" || tenantSlug === "default") {
+      if (
+        payload.tenantId &&
+        payload.tenantId !== "tenant_smk_default" &&
+        payload.tenantId !== "default" &&
+        payload.tenantId !== "smk"
+      ) {
+        return null;
+      }
+    } else {
+      // On tenant store (e.g. blipkart): token must NOT belong to default store
+      if (payload.tenantId === "tenant_smk_default") {
+        return null;
+      }
+    }
   }
 
   return token;
@@ -192,12 +231,11 @@ export const getMemberSince = (createdAt) => {
 };
 
 export const logout = () => {
-  const tenantSlug = getClientTenantSlug();
-  if (tenantSlug) {
-    localStorage.removeItem(getTenantStorageKey("token"));
-    localStorage.removeItem(getTenantStorageKey("loginToProceed"));
-    localStorage.removeItem(getTenantStorageKey("next"));
-  } else {
+  const tenantSlug = getClientTenantSlug() || "smk";
+  localStorage.removeItem(getTenantStorageKey("token", tenantSlug));
+  localStorage.removeItem(getTenantStorageKey("loginToProceed", tenantSlug));
+  localStorage.removeItem(getTenantStorageKey("next", tenantSlug));
+  if (tenantSlug === "smk" || tenantSlug === "default") {
     localStorage.removeItem("token");
     localStorage.removeItem("loginToProceed");
     localStorage.removeItem("next");

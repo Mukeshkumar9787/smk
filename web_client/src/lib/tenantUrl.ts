@@ -60,7 +60,7 @@ export function stripTenantPrefix(pathname = ""): string {
 }
 
 export function getTenantStorageKey(baseKey: string, explicitSlug?: string | null): string {
-  const slug = explicitSlug !== undefined ? explicitSlug : getClientTenantSlug();
-  if (!slug) return baseKey;
+  const rawSlug = explicitSlug !== undefined ? explicitSlug : getClientTenantSlug();
+  const slug = rawSlug && rawSlug !== "default" ? rawSlug.toLowerCase() : "smk";
   return `tenant:${slug}:${baseKey}`;
 }

@@ -38,7 +38,6 @@ export default function PlatformAdminLogin() {
       // Store platform token and admin metadata
       const token = res.data.token;
       localStorage.setItem("platform_token", token);
-      localStorage.setItem("token", token);
       localStorage.setItem("platform_admin", JSON.stringify(res.data.admin || {}));
 
       notifySuccess("Welcome, Platform Administrator!");
