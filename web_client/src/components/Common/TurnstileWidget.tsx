@@ -103,6 +103,10 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
         return latestTokenRef.current;
       }
 
+      if (!window.turnstile || !widgetIdRef.current) {
+        return latestTokenRef.current || "";
+      }
+
       // 3. Await token generation or trigger execute
       return new Promise<string>((resolve) => {
         let completed = false;
@@ -111,7 +115,7 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
             completed = true;
             resolve(latestTokenRef.current || "");
           }
-        }, 8000);
+        }, 3000);
 
         pendingResolvers.current.push((t: string) => {
           if (!completed) {
@@ -152,12 +156,14 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
         return;
       }
 
-      const existingScript = document.getElementById("cf-turnstile-script");
+      let isMounted = true;
+      let pollTimer: NodeJS.Timeout | null = null;
 
       const renderWidget = () => {
-        if (!window.turnstile || !containerRef.current || widgetIdRef.current) return;
+        if (!isMounted || !window.turnstile || !containerRef.current || widgetIdRef.current) return;
 
         try {
+          containerRef.current.innerHTML = "";
           const id = window.turnstile.render(containerRef.current, {
             sitekey: siteKey,
             theme,
@@ -189,33 +195,54 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
             },
           });
           widgetIdRef.current = id;
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
         } catch (err) {
           console.error("[TurnstileWidget] Error rendering Turnstile widget:", err);
         }
       };
 
+      const existingScript = document.getElementById("cf-turnstile-script");
+
       if (window.turnstile) {
         setScriptLoaded(true);
         renderWidget();
-      } else if (!existingScript) {
-        const script = document.createElement("script");
-        script.id = "cf-turnstile-script";
-        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          setScriptLoaded(true);
-          renderWidget();
-        };
-        document.head.appendChild(script);
       } else {
-        existingScript.addEventListener("load", () => {
-          setScriptLoaded(true);
-          renderWidget();
-        });
+        if (!existingScript) {
+          const script = document.createElement("script");
+          script.id = "cf-turnstile-script";
+          script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+          script.async = true;
+          script.defer = true;
+          script.onload = () => {
+            setScriptLoaded(true);
+            renderWidget();
+          };
+          document.head.appendChild(script);
+        } else {
+          existingScript.addEventListener("load", () => {
+            setScriptLoaded(true);
+            renderWidget();
+          });
+        }
+
+        // Resilient polling interval
+        pollTimer = setInterval(() => {
+          if (window.turnstile && containerRef.current && !widgetIdRef.current) {
+            setScriptLoaded(true);
+            renderWidget();
+          }
+        }, 100);
       }
 
       return () => {
+        isMounted = false;
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
         if (widgetIdRef.current && window.turnstile) {
           try {
             window.turnstile.remove(widgetIdRef.current);

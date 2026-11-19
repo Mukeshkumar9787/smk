@@ -14,8 +14,12 @@ export const verifyTurnstileToken = async (req, res, next) => {
 
   const token =
     req.body?.turnstileToken ||
+    req.body?.["cf-turnstile-response"] ||
+    req.body?.cfTurnstileResponse ||
+    req.body?.token ||
     req.headers["x-turnstile-token"] ||
-    req.headers["cf-turnstile-token"];
+    req.headers["cf-turnstile-token"] ||
+    req.headers["cf-turnstile-response"];
 
   if (!token) {
     return res.status(400).json({
@@ -25,17 +29,9 @@ export const verifyTurnstileToken = async (req, res, next) => {
   }
 
   try {
-    const clientIp =
-      req.headers["cf-connecting-ip"] ||
-      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
-      req.ip;
-
     const formData = new URLSearchParams();
     formData.append("secret", secretKey);
     formData.append("response", token);
-    if (clientIp) {
-      formData.append("remoteip", clientIp);
-    }
 
     const verifyResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
