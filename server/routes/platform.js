@@ -19,5 +19,7 @@ router.post("/create", tenantController.createPlatformTenant);
 router.patch("/:tenantId/status", tenantController.updateTenantStatus);
 router.patch("/:tenantId/chatbot", tenantController.updateTenantChatbotAccess);
 router.patch("/:tenantId/plan", tenantController.updateTenantPlan);
+router.get("/:tenantId/users", tenantController.getTenantAdminUsers);
+router.patch("/:tenantId/users/:userId/password", tenantController.updateTenantUserPassword);
 
 export default router;

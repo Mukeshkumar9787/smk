@@ -5,8 +5,10 @@ import Link from "next/link";
 import {
   createPlatformStore,
   getPlatformOverview,
+  getPlatformTenantUsers,
   updatePlatformStoreChatbot,
   updatePlatformStoreStatus,
+  updatePlatformTenantUserPassword,
 } from "@/http/apiCalls";
 import { notifyError, notifySuccess } from "@/utils/notify";
 import { getCurrencyDetails } from "@/utils/helper";
@@ -27,6 +29,15 @@ export default function PlatformAdmin() {
     aiChatbotEnabled: true,
     primaryColor: "#3C50E0",
   });
+
+  // Tenant Admin Users & Password Management Modal
+  const [selectedTenantForAdmins, setSelectedTenantForAdmins] = useState<any | null>(null);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
 
   useEffect(() => {
     try {
@@ -113,6 +124,59 @@ export default function PlatformAdmin() {
       notifyError("Failed to create store");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleOpenAdminUsers = async (tenant: any) => {
+    setSelectedTenantForAdmins(tenant);
+    setEditingUserId(null);
+    setNewPassword("");
+    setConfirmPassword("");
+    try {
+      setLoadingAdmins(true);
+      const res = await getPlatformTenantUsers(tenant.id);
+      if (res?.success) {
+        setAdminUsers(res.data?.users || []);
+      } else {
+        notifyError(res?.message || "Failed to load tenant admins");
+        setAdminUsers([]);
+      }
+    } catch {
+      notifyError("Failed to fetch tenant administrators");
+      setAdminUsers([]);
+    } finally {
+      setLoadingAdmins(false);
+    }
+  };
+
+  const handleUpdatePassword = async (userId: number) => {
+    if (!newPassword || newPassword.length < 6) {
+      notifyError("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      notifyError("New password and confirm password do not match");
+      return;
+    }
+    try {
+      setUpdatingPassword(true);
+      const res = await updatePlatformTenantUserPassword(
+        selectedTenantForAdmins.id,
+        userId,
+        newPassword
+      );
+      if (res?.success) {
+        notifySuccess(res.message || "Password updated successfully");
+        setEditingUserId(null);
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        notifyError(res?.message || "Failed to update password");
+      }
+    } catch (err: any) {
+      notifyError(err?.response?.data?.message || "Failed to update password");
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -398,6 +462,14 @@ export default function PlatformAdmin() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAdminUsers(t)}
+                          className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>🔑</span>
+                          <span>Admin Users</span>
+                        </button>
                         <a
                           href={t.isDefault ? "/" : `/s/${t.slug}`}
                           data-no-tenant-prefix="true"
@@ -423,6 +495,130 @@ export default function PlatformAdmin() {
           </div>
         </div>
       </div>
+
+      {/* Modal: View Tenant Admins & Update Password */}
+      {selectedTenantForAdmins && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-dark">
+                  Tenant Administrators & Passwords
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {selectedTenantForAdmins.name} (<span className="font-mono">/s/{selectedTenantForAdmins.slug}</span>)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTenantForAdmins(null)}
+                className="h-8 w-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingAdmins ? (
+              <div className="py-8 text-center text-sm text-slate-500">
+                Loading administrator accounts...
+              </div>
+            ) : adminUsers.length === 0 ? (
+              <div className="py-8 text-center text-sm text-slate-500">
+                No dedicated administrator accounts found for this store.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {adminUsers.map((user: any) => {
+                  const isEditing = editingUserId === user.id;
+
+                  return (
+                    <div
+                      key={user.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-dark">{user.name}</span>
+                            <span className="rounded-md bg-blue/10 px-2 py-0.5 text-[10px] font-bold text-blue uppercase">
+                              {user.tenantRole || user.role}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-mono mt-0.5">{user.email}</p>
+                        </div>
+
+                        {!isEditing ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingUserId(user.id);
+                              setNewPassword("");
+                              setConfirmPassword("");
+                            }}
+                            className="rounded-xl border border-blue bg-blue/5 px-3 py-1.5 text-xs font-semibold text-blue hover:bg-blue hover:text-white transition cursor-pointer"
+                          >
+                            Update Password
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEditingUserId(null)}
+                            className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+
+                      {isEditing && (
+                        <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-3">
+                          <p className="text-xs font-medium text-slate-700">Set New Password for {user.email}:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="password"
+                              placeholder="New password (min 6 chars)"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue"
+                            />
+                            <input
+                              type="password"
+                              placeholder="Confirm new password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              disabled={updatingPassword}
+                              onClick={() => handleUpdatePassword(user.id)}
+                              className="rounded-xl bg-blue px-4 py-2 text-xs font-semibold text-white hover:bg-blue-dark disabled:opacity-50 transition cursor-pointer"
+                            >
+                              {updatingPassword ? "Updating..." : "Save Password"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedTenantForAdmins(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { notFound } from "next/navigation";
 import "../css/euclid-circular-a-font.css";
 import "../css/style.css";
 import "react-image-crop/dist/ReactCrop.css";
@@ -130,28 +131,7 @@ export default async function RootLayout({
   ]);
 
   if (errorCode === "TENANT_SUSPENDED" || errorCode === "TENANT_NOT_FOUND") {
-    const isSuspended = errorCode === "TENANT_SUSPENDED";
-    return (
-      <html lang="en" suppressHydrationWarning={true}>
-        <body className="min-h-screen bg-slate-50 text-slate-900">
-          <main className="flex min-h-screen items-center justify-center px-4 py-16">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
-                {isSuspended ? "⏸️" : "🔍"}
-              </div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                {isSuspended ? "Store Currently Unavailable" : "Store Not Found"}
-              </h1>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {isSuspended
-                  ? "This storefront has been temporarily paused by its administrator. Please check back later."
-                  : "The store link you visited does not exist or may have changed."}
-              </p>
-            </div>
-          </main>
-        </body>
-      </html>
-    );
+    notFound();
   }
 
   const themeVars = buildThemeCssVariables(tenant?.branding);

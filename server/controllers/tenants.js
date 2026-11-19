@@ -177,6 +177,32 @@ const getPlatformMe = async (req, res) => {
   }
 };
 
+const getTenantAdminUsers = async (req, res) => {
+  try {
+    const data = await tenantService.getTenantAdminUsers(req.params.tenantId);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
+const updateTenantUserPassword = async (req, res) => {
+  try {
+    const data = await tenantService.updateTenantUserPassword({
+      tenantId: req.params.tenantId,
+      userId: req.params.userId,
+      newPassword: req.body?.newPassword,
+    });
+    return res.status(200).json({
+      success: true,
+      message: `Password updated successfully for ${data.email}`,
+      data,
+    });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
 export default {
   resolveCurrentTenant,
   listPlans,
@@ -192,4 +218,6 @@ export default {
   updateTenantChatbotAccess,
   platformLogin,
   getPlatformMe,
+  getTenantAdminUsers,
+  updateTenantUserPassword,
 };

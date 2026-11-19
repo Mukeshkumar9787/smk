@@ -53,3 +53,5 @@ export const API_TENANTS_PLATFORM_CREATE = `${API_PLATFORM}/create`;
 export const API_TENANTS_PLATFORM_STATUS = (tenantId) => `${API_PLATFORM}/${tenantId}/status`;
 export const API_TENANTS_PLATFORM_PLAN = (tenantId) => `${API_PLATFORM}/${tenantId}/plan`;
 export const API_TENANTS_PLATFORM_CHATBOT = (tenantId) => `${API_PLATFORM}/${tenantId}/chatbot`;
+export const API_TENANTS_PLATFORM_USERS = (tenantId) => `${API_PLATFORM}/${tenantId}/users`;
+export const API_TENANTS_PLATFORM_USER_PASSWORD = (tenantId, userId) => `${API_PLATFORM}/${tenantId}/users/${userId}/password`;

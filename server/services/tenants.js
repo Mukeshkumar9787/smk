@@ -772,6 +772,121 @@ export const authenticatePlatformAdmin = async ({ email, password }) => {
   };
 };
 
+const getTenantAdminUsers = async (tenantId) => {
+  return runWithBypass(async () => {
+    const tenant = await rawPrisma.tenant.findFirst({
+      where: {
+        OR: [{ id: tenantId }, { slug: tenantId }],
+      },
+    });
+    if (!tenant) {
+      const err = new Error("Tenant store not found");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const users = await rawPrisma.user.findMany({
+      where: {
+        tenantId: tenant.id,
+        OR: [
+          { role: "ADMIN" },
+          { tenantRole: { in: [TENANT_ROLES.STORE_OWNER, TENANT_ROLES.STORE_STAFF] } },
+        ],
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        email: true,
+        mobile: true,
+        role: true,
+        tenantRole: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [{ tenantRole: "asc" }, { createdAt: "asc" }],
+    });
+
+    return {
+      tenant: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+      },
+      users,
+    };
+  });
+};
+
+const updateTenantUserPassword = async ({ tenantId, userId, newPassword }) => {
+  if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    const err = new Error("Password must be at least 6 characters");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return runWithBypass(async () => {
+    const tenant = await rawPrisma.tenant.findFirst({
+      where: {
+        OR: [{ id: tenantId }, { slug: tenantId }],
+      },
+      include: { branding: true },
+    });
+    if (!tenant) {
+      const err = new Error("Tenant store not found");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const user = await rawPrisma.user.findFirst({
+      where: {
+        id: Number(userId),
+        tenantId: tenant.id,
+      },
+    });
+
+    if (!user) {
+      const err = new Error("User not found for this tenant store");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const passwordHash = await hashedPassword(newPassword);
+
+    const updatedUser = await rawPrisma.user.update({
+      where: { id: user.id },
+      data: { password: passwordHash },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        tenantRole: true,
+      },
+    });
+
+    // Synchronize new credentials to Chatbot Service
+    try {
+      await emitTenantLifecycleEvent({
+        event: "TENANT_ADMIN_PASSWORD_UPDATED",
+        tenantId: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        status: tenant.status,
+        aiChatbotEnabled: tenant.branding?.aiChatbotActive !== false,
+        ownerEmail: updatedUser.email,
+        ownerPasswordHash: passwordHash,
+        ownerName: updatedUser.name,
+      });
+    } catch (syncErr) {
+      console.warn("[Password Sync Warning]:", syncErr.message);
+    }
+
+    return updatedUser;
+  });
+};
+
 export default {
   formatPublicTenant,
   listPlans,
@@ -785,4 +900,6 @@ export default {
   updateTenantPlan,
   updateTenantChatbotAccess,
   authenticatePlatformAdmin,
+  getTenantAdminUsers,
+  updateTenantUserPassword,
 };
