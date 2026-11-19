@@ -11,13 +11,10 @@ import { useTenant } from "@/app/context/TenantContext";
 export default function ChatbotAssistant() {
   const { tenant, branding } = useTenant();
 
-  // Plan accessibility check
-  const isPlanAllowed = Boolean(tenant?.isDefault || tenant?.plan?.aiChatbotEnabled);
-
-  // Store-level feature toggle
+  // Store-level feature toggle: enabled/disabled directly
   const isChatbotActive = branding?.aiChatbotActive !== false;
 
-  if (!isPlanAllowed || !isChatbotActive) {
+  if (!isChatbotActive) {
     return null;
   }
 

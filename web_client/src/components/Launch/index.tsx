@@ -3,12 +3,11 @@
 import React, { useEffect, useState } from "react";
 import {
   checkStoreSlugAvailability,
-  getTenantPlans,
   provisionTenantStore,
 } from "@/http/apiCalls";
 import { THEME_PRESETS } from "@/lib/theme";
 import { getTenantStorageKey } from "@/lib/tenantUrl";
-import { getLoggedInUserData, getStoredToken, redirectToSignIn } from "@/utils/helper";
+import { getLoggedInUserData, getStoredToken } from "@/utils/helper";
 import { notifyError, notifySuccess } from "@/utils/notify";
 import Link from "next/link";
 
@@ -22,8 +21,7 @@ function slugify(text: string) {
 }
 
 export default function LaunchStore() {
-  const [plans, setPlans] = useState<any[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState("STARTER");
+  const [enableChatbot, setEnableChatbot] = useState(true);
   const [storeName, setStoreName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -41,7 +39,7 @@ export default function LaunchStore() {
   const [authState, setAuthState] = useState<"checking" | "authorized" | "forbidden">("checking");
 
   useEffect(() => {
-    const checkAccessAndLoadPlans = async () => {
+    const checkAccess = async () => {
       if (!getStoredToken()) {
         window.location.href = "/platform-admin/login";
         return;
@@ -53,18 +51,12 @@ export default function LaunchStore() {
           return;
         }
         setAuthState("authorized");
-
-        const res = await getTenantPlans();
-        if (res?.success && Array.isArray(res.data)) {
-          setPlans(res.data);
-          if (res.data[0]?.code) setSelectedPlan(res.data[0].code);
-        }
       } catch (err) {
         console.error(err);
         setAuthState("forbidden");
       }
     };
-    checkAccessAndLoadPlans();
+    checkAccess();
   }, []);
 
   useEffect(() => {
@@ -119,7 +111,7 @@ export default function LaunchStore() {
         ownerEmail,
         ownerPassword,
         ownerMobile,
-        planCode: selectedPlan,
+        aiChatbotEnabled: enableChatbot,
         primaryColor: selectedPreset.primaryColor,
         accentColor: selectedPreset.accentColor,
       });
@@ -200,76 +192,35 @@ export default function LaunchStore() {
           </p>
         </div>
 
-        {/* Plans */}
-        <div className="mb-10 grid gap-5 md:grid-cols-3">
-          {(plans.length > 0
-            ? plans
-            : [
-                {
-                  code: "STARTER",
-                  name: "Starter",
-                  priceMonthly: 999,
-                  maxProducts: 50,
-                  description: "Branded storefront, logo upload, color theme studio, up to 50 products.",
-                },
-                {
-                  code: "GROWTH",
-                  name: "Growth",
-                  priceMonthly: 2499,
-                  maxProducts: 500,
-                  customDomainAllowed: true,
-                  description: "Custom domain support, up to 500 products, and priority commerce tools.",
-                },
-                {
-                  code: "PRO",
-                  name: "Pro AI",
-                  priceMonthly: 4999,
-                  maxProducts: 5000,
-                  customDomainAllowed: true,
-                  aiChatbotEnabled: true,
-                  autoProcurementEnabled: true,
-                  description: "Full AI shopping assistant, automated restock agents, and scale limits.",
-                },
-              ]
-          ).map((plan) => {
-            const active = selectedPlan === plan.code;
-            return (
-              <button
-                key={plan.code}
-                type="button"
-                onClick={() => setSelectedPlan(plan.code)}
-                className={`flex flex-col justify-between rounded-[28px] border p-6 text-left transition ${
-                  active
-                    ? "border-blue bg-white shadow-[0_20px_50px_rgba(60,80,224,0.14)] ring-2 ring-blue/20"
-                    : "border-slate-200 bg-white/80 hover:border-slate-300"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-dark">{plan.name}</span>
-                    {active && (
-                      <span className="rounded-full bg-blue px-2.5 py-0.5 text-xs font-semibold text-white">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-3 text-3xl font-bold text-dark">
-                    ₹{plan.priceMonthly}
-                    <span className="text-sm font-normal text-dark-4"> / month</span>
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-dark-4">{plan.description}</p>
-                </div>
+        {/* Provisioning Capabilities & Chatbot Config */}
+        <div className="mb-10 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue/10 px-3 py-1 text-xs font-semibold text-blue mb-3">
+                ✨ Independent Multi-Tenant Architecture
+              </span>
+              <h3 className="text-xl font-bold text-dark">Enterprise-Grade E-Commerce Platform</h3>
+              <p className="mt-1.5 text-sm leading-6 text-dark-4 max-w-xl">
+                Every store is provisioned with complete data isolation, unlimited product catalog, theme studio, dedicated store URL, and direct administrator access.
+              </p>
+            </div>
 
-                <ul className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-xs text-slate-600">
-                  <li>✔ Up to {plan.maxProducts} isolated products</li>
-                  <li>✔ Custom logo &amp; color theme studio</li>
-                  <li>✔ Dedicated store admin &amp; analytics</li>
-                  {plan.customDomainAllowed && <li>✔ Custom domain ready</li>}
-                  {plan.aiChatbotEnabled && <li>✔ AI RAG support chatbot</li>}
-                </ul>
-              </button>
-            );
-          })}
+            <div className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50/70 p-4 shrink-0">
+              <input
+                id="enable-chatbot"
+                type="checkbox"
+                checked={enableChatbot}
+                onChange={(e) => setEnableChatbot(e.target.checked)}
+                className="h-5 w-5 rounded text-blue focus:ring-blue cursor-pointer"
+              />
+              <label htmlFor="enable-chatbot" className="cursor-pointer">
+                <span className="block text-sm font-bold text-dark">🤖 Enable AI Support Chatbot</span>
+                <span className="block text-xs text-slate-500">
+                  Activates dedicated RAG chatbot & knowledge base
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Store Provisioning Form */}

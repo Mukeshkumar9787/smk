@@ -52,3 +52,4 @@ export const API_TENANTS_PLATFORM_OVERVIEW = `${API_PLATFORM}/overview`;
 export const API_TENANTS_PLATFORM_CREATE = `${API_PLATFORM}/create`;
 export const API_TENANTS_PLATFORM_STATUS = (tenantId) => `${API_PLATFORM}/${tenantId}/status`;
 export const API_TENANTS_PLATFORM_PLAN = (tenantId) => `${API_PLATFORM}/${tenantId}/plan`;
+export const API_TENANTS_PLATFORM_CHATBOT = (tenantId) => `${API_PLATFORM}/${tenantId}/chatbot`;

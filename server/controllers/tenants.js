@@ -118,6 +118,22 @@ const createPlatformTenant = async (req, res) => {
   }
 };
 
+const updateTenantChatbotAccess = async (req, res) => {
+  try {
+    const data = await tenantService.updateTenantChatbotAccess({
+      tenantId: req.params.tenantId,
+      aiChatbotEnabled: req.body?.aiChatbotEnabled,
+    });
+    return res.status(200).json({
+      success: true,
+      message: `Chatbot access ${data.aiChatbotActive ? "enabled" : "disabled"} successfully`,
+      data,
+    });
+  } catch (err) {
+    return errorHandler(err, res);
+  }
+};
+
 const updateTenantPlan = async (req, res) => {
   try {
     const data = await tenantService.updateTenantPlan({
@@ -173,6 +189,7 @@ export default {
   updateTenantStatus,
   createPlatformTenant,
   updateTenantPlan,
+  updateTenantChatbotAccess,
   platformLogin,
   getPlatformMe,
 };

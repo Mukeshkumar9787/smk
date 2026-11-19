@@ -4,7 +4,7 @@ import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildNoIndexMetadata(
   "Platform Super Admin",
-  "Manage all multi-tenant stores, plans, and platform metrics."
+  "Manage all multi-tenant stores, AI chatbot accessibility, and platform metrics."
 );
 
 export default function PlatformAdminPage() {

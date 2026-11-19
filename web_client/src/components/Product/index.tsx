@@ -11,8 +11,6 @@ import { useTenant } from "@/app/context/TenantContext";
 
 const Product = () => {
   const { tenant, storeHref } = useTenant();
-  const maxProducts = tenant.plan?.maxProducts || 50;
-  const planName = tenant.plan?.name || "Starter";
   const [productItems, setProductItems] = React.useState([]);
   const [totalCount, setTotalCount] = React.useState(0);
   const [pagination, setPagination] = React.useState({ pageNumber: 1, pageSize: 10});
@@ -144,20 +142,10 @@ const Product = () => {
               title="Manage product inventory and listing quality."
               description="Track catalog coverage, update details, and keep inventory-ready products visible to customers."
               stats={[
-                { label: "Active Products", value: totalCount },
-                { label: "Plan Capacity", value: `${totalCount} / ${maxProducts} (${planName})` },
+                { label: "Total Catalog Items", value: totalCount },
+                { label: "Current Page Items", value: productItems.length },
               ]}
             />
-            {totalCount >= maxProducts && (
-              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-center justify-between">
-                <span>
-                  ⚠️ You have reached your <strong>{planName}</strong> plan limit of <strong>{maxProducts}</strong> products. Upgrade your plan to add more products.
-                </span>
-                <Link href={storeHref("/config/branding")} className="font-semibold underline ml-2 shrink-0">
-                  Manage Plan →
-                </Link>
-              </div>
-            )}
             <div className="admin-page-card">
               <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>

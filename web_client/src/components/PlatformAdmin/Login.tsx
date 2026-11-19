@@ -132,7 +132,7 @@ export default function PlatformAdminLogin() {
         </form>
 
         <div className="mt-8 border-t border-slate-800/80 pt-6 text-center text-[11px] text-slate-500">
-          This portal manages multi-tenant provisioning, status toggles, and global plan lifecycles.
+          This portal manages multi-tenant provisioning, store status, and AI chatbot lifecycle.
         </div>
       </div>
     </div>

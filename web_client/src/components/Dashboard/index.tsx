@@ -190,34 +190,30 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Tenant Plan & Autonomous Feature Status */}
+          {/* Tenant Store & Autonomous Feature Status */}
           <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="rounded-xl bg-blue/10 px-3 py-1.5 text-xs font-bold text-blue">
-                📦 {tenant.plan?.name || "Starter"} Plan
+                🏪 Store: {tenant.name}
               </span>
               <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
-                Catalog: {Number(overview.totalProducts || 0)} / {tenant.plan?.maxProducts || 50} products
+                Products: {Number(overview.totalProducts || 0)}
               </span>
               <span className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
-                (tenant.isDefault || tenant.plan?.aiChatbotEnabled) && branding.aiChatbotActive !== false
+                branding.aiChatbotActive !== false
                   ? "bg-emerald-100 text-emerald-800"
-                  : (tenant.isDefault || tenant.plan?.aiChatbotEnabled)
-                  ? "bg-slate-100 text-slate-600"
-                  : "bg-amber-100 text-amber-800"
+                  : "bg-slate-100 text-slate-600"
               }`}>
-                {(tenant.isDefault || tenant.plan?.aiChatbotEnabled)
-                  ? branding.aiChatbotActive !== false
-                    ? "🤖 AI Chatbot: Active"
-                    : "⏸️ AI Chatbot: Off"
-                  : "🔒 AI Chatbot: Pro AI Only"}
+                {branding.aiChatbotActive !== false
+                  ? "🤖 AI Chatbot: Active"
+                  : "⏸️ AI Chatbot: Inactive"}
               </span>
             </div>
             <Link
               href={storeHref("/config/branding")}
               className="inline-flex items-center text-xs font-semibold text-blue hover:underline"
             >
-              Manage Plan Features & Chatbot →
+              Configure Store Branding →
             </Link>
           </div>
 
