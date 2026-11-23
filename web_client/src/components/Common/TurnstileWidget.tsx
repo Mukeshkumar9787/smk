@@ -109,36 +109,73 @@ const TurnstileWidget = forwardRef<TurnstileRef, TurnstileWidgetProps>(
         return latestTokenRef.current;
       }
 
+      // 2. If the widget is still loading or initializing, wait up to 8s for it
       if (!window.turnstile || !widgetIdRef.current) {
-        return latestTokenRef.current || "";
+        await new Promise<void>((resolve) => {
+          let elapsed = 0;
+          const poll = setInterval(() => {
+            elapsed += 100;
+            if (
+              (window.turnstile && widgetIdRef.current) ||
+              turnstileError ||
+              elapsed >= 8000
+            ) {
+              clearInterval(poll);
+              resolve();
+            }
+          }, 100);
+        });
+      }
+
+      if (turnstileError) {
+        return "";
+      }
+
+      // Re-check getResponse() after waiting
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          const response = window.turnstile.getResponse(widgetIdRef.current);
+          if (response && response.trim().length > 0) {
+            latestTokenRef.current = response;
+            return response;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (latestTokenRef.current && latestTokenRef.current.trim().length > 0) {
+        return latestTokenRef.current;
       }
 
       // 3. Await token generation or trigger execute
-      return new Promise<string>((resolve) => {
-        let completed = false;
-        const timer = setTimeout(() => {
-          if (!completed) {
-            completed = true;
-            resolve(latestTokenRef.current || "");
-          }
-        }, 8000);
+      if (widgetIdRef.current && window.turnstile) {
+        return new Promise<string>((resolve) => {
+          let completed = false;
+          const timer = setTimeout(() => {
+            if (!completed) {
+              completed = true;
+              resolve(latestTokenRef.current || "");
+            }
+          }, 10000);
 
-        pendingResolvers.current.push((t: string) => {
-          if (!completed) {
-            completed = true;
-            clearTimeout(timer);
-            resolve(t);
-          }
-        });
+          pendingResolvers.current.push((t: string) => {
+            if (!completed) {
+              completed = true;
+              clearTimeout(timer);
+              resolve(t);
+            }
+          });
 
-        if (widgetIdRef.current && window.turnstile) {
           try {
             window.turnstile.execute(widgetIdRef.current);
           } catch (e) {
             // Widget might already be evaluating, safe to catch
           }
-        }
-      });
+        });
+      }
+
+      return latestTokenRef.current || "";
     };
 
     useImperativeHandle(ref, () => ({
