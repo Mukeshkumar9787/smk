@@ -160,20 +160,29 @@ const ProductForm = ({ params }) => {
       try {
         setApiState("loading");
         const data = await getProductBySlugAdmin(params);
+        if (!data?.success) {
+          // If unauthorized or not found in admin scope, gracefully route to the public shop-details page
+          if (data?.httpStatus === 401 || data?.httpStatus === 404 || !data?.data) {
+            router.replace(withTenantPath(`/shop-details/${params.slug}`));
+            return;
+          }
+        }
         editDataRef.current = data?.data || {};
-        setVariant(editDataRef.current.variant);
-        setTitle(editDataRef.current.title);
+        setVariant(editDataRef.current.variant || "");
+        setTitle(editDataRef.current.title || "");
         setDescription(editDataRef.current.description || "");
-        setStatus(editDataRef.current.status);
-        setImages(editDataRef.current.images);
-        setCategoryId(editDataRef.current.categoryId);
-        setHsnId(editDataRef.current.hsnId);
-        setColorId(editDataRef.current.colorId);
-        setSizeId(editDataRef.current.sizeId);
-        setMrp(editDataRef.current.mrp);
-        setPrice(editDataRef.current.price);
-        setStock(editDataRef.current.stock);
-        fetchReviews(editDataRef.current.id);
+        setStatus(editDataRef.current.status || STATUS_TYPES.ACTIVE);
+        setImages(Array.isArray(editDataRef.current.images) ? editDataRef.current.images : []);
+        setCategoryId(editDataRef.current.categoryId || null);
+        setHsnId(editDataRef.current.hsnId || null);
+        setColorId(editDataRef.current.colorId || null);
+        setSizeId(editDataRef.current.sizeId || null);
+        setMrp(editDataRef.current.mrp ?? 1);
+        setPrice(editDataRef.current.price ?? 1);
+        setStock(editDataRef.current.stock ?? 1);
+        if (editDataRef.current.id) {
+          fetchReviews(editDataRef.current.id);
+        }
       } catch (err) {
         console.error(err);
       } finally {

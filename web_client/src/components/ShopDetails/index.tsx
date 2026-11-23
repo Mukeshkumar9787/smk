@@ -333,24 +333,30 @@ const ShopDetails = ({ params, initialProduct = null, initialReviews = [] }) => 
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-4.5 border-y border-gray-3 mt-7.5 mb-6 py-9">
-                    <div className="flex items-center gap-4">
-                      <div className="min-w-[65px]">
-                        <h4 className="font-medium text-dark">Color:</h4>
-                      </div>
-                      <div className="flex items-center gap-2.5">
-                        <div className={`flex items-center justify-center w-5.5 h-5.5 rounded-full border`} style={{ borderColor: `${product.colorCode}` }}>
-                          <span className="block w-3 h-3 rounded-full" style={{ backgroundColor: `${product.colorCode}` }}></span>
+                  {(product.colorCode || product.sizeTitle) && (
+                    <div className="flex flex-col gap-4.5 border-y border-gray-3 mt-7.5 mb-6 py-9">
+                      {product.colorCode && (
+                        <div className="flex items-center gap-4">
+                          <div className="min-w-[65px]">
+                            <h4 className="font-medium text-dark">Color:</h4>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex items-center justify-center w-5.5 h-5.5 rounded-full border" style={{ borderColor: `${product.colorCode}` }}>
+                              <span className="block w-3 h-3 rounded-full" style={{ backgroundColor: `${product.colorCode}` }}></span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      {product.sizeTitle && (
+                        <div className="flex items-center gap-4">
+                          <div className="min-w-[65px]">
+                            <h4 className="font-medium text-dark">Size:</h4>
+                          </div>
+                          <input type="text" value={product.sizeTitle} readOnly className="focus:outline-none" />
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="min-w-[65px]">
-                        <h4 className="font-medium text-dark">Size:</h4>
-                      </div>
-                      <input type="text" value={product.sizeTitle} readOnly className="focus:outline-none" />
-                    </div>
-                  </div>
+                  )}
 
                   <div className="flex flex-wrap items-center w-full gap-3">
                     <AddToCart align="right" id={product.id} stack={false} stock={product.stock} />

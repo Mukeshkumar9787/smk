@@ -209,8 +209,8 @@ const getProductBySlug = async (slug, options = {}) => {
     i.path = convertToFullFilePath(i.path);
     return i;
   });
-  product.colorCode = product.Color.code;
-  product.sizeTitle = product.Size.title;
+  product.colorCode = product.Color?.code || null;
+  product.sizeTitle = product.Size?.title || null;
   product.stock = stockQty;
   product.avgRating = Number(reviewAgg?._avg?.rating || 0);
   product.reviewCount = Number(reviewAgg?._count?._all || 0);
