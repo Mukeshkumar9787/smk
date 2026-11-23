@@ -252,6 +252,13 @@ export default function PlatformAdmin() {
             >
               Sign Out
             </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate((s) => !s)}
+              className="inline-flex min-h-[42px] items-center rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 transition cursor-pointer"
+            >
+              {showCreate ? "Close Drawer" : "+ Quick Form"}
+            </button>
             <Link
               href="/launch"
               className="inline-flex min-h-[42px] items-center rounded-2xl bg-blue px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-dark cursor-pointer"

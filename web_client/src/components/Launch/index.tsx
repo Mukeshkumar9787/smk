@@ -40,14 +40,32 @@ export default function LaunchStore() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (!getStoredToken()) {
-        window.location.href = "/platform-admin/login";
+      const token =
+        getStoredToken() ||
+        (typeof window !== "undefined" ? localStorage.getItem("platform_token") : null);
+
+      if (!token) {
+        window.location.href = "/platform-admin/login?next=/launch";
         return;
       }
       try {
         const user = await getLoggedInUserData();
         if (!user || !user.isPlatformAdmin) {
-          window.location.href = "/platform-admin/login";
+          // If stored admin exists in localStorage with isPlatformAdmin, grant access
+          const localAdmin =
+            typeof window !== "undefined"
+              ? localStorage.getItem("platform_admin")
+              : null;
+          if (localAdmin) {
+            try {
+              const parsed = JSON.parse(localAdmin);
+              if (parsed && parsed.isPlatformAdmin) {
+                setAuthState("authorized");
+                return;
+              }
+            } catch {}
+          }
+          window.location.href = "/platform-admin/login?next=/launch";
           return;
         }
         setAuthState("authorized");
@@ -155,7 +173,7 @@ export default function LaunchStore() {
               Only the Platform Super Admin can create and provision new stores.
             </p>
             <Link
-              href="/platform-admin/login"
+              href="/platform-admin/login?next=/launch"
               className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-dark"
             >
               Sign In as Platform Admin

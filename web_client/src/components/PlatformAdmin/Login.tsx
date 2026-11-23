@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { loginPlatformAdmin } from "@/http/apiCalls";
 import { notifyError, notifySuccess } from "@/utils/notify";
+import { isTokenExpired } from "@/utils/helper";
 
 export default function PlatformAdminLogin() {
   const [email, setEmail] = useState("");
@@ -11,6 +12,17 @@ export default function PlatformAdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("platform_token");
+      if (token && !isTokenExpired(token)) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const nextPath = searchParams.get("next") || "/platform-admin";
+        window.location.href = nextPath;
+      }
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,8 +53,10 @@ export default function PlatformAdminLogin() {
       localStorage.setItem("platform_admin", JSON.stringify(res.data.admin || {}));
 
       notifySuccess("Welcome, Platform Administrator!");
-      // Immediate full navigation into the platform admin overview
-      window.location.href = "/platform-admin";
+      // Immediate full navigation into the platform admin overview or target next path
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const nextPath = searchParams?.get("next") || "/platform-admin";
+      window.location.href = nextPath;
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||

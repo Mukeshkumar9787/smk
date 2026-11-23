@@ -197,8 +197,14 @@ axiosInstance.interceptors.response.use((response) => {
     }
 
     const isPlatformLocation = typeof window !== 'undefined' && (
-      window.location.pathname.startsWith('/platform-admin') ||
-      stripTenantPrefix(window.location.pathname).startsWith('/platform-admin')
+      window.location.pathname === '/platform-admin' ||
+      window.location.pathname.startsWith('/platform-admin/') ||
+      stripTenantPrefix(window.location.pathname) === '/platform-admin' ||
+      stripTenantPrefix(window.location.pathname).startsWith('/platform-admin/') ||
+      window.location.pathname === '/launch' ||
+      window.location.pathname.startsWith('/launch/') ||
+      stripTenantPrefix(window.location.pathname) === '/launch' ||
+      stripTenantPrefix(window.location.pathname).startsWith('/launch/')
     );
     const isPlatformApi = Boolean(
       config?.url?.includes('/platform') ||
